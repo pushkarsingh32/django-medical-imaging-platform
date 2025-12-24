@@ -1,0 +1,19 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+django = "*"
+django-allauth = {extras = ["headless"], version = "*"}
+djangorestframework = "*"
+django-cors-headers = "*"
+mysqlclient = "*"
+requests = "*"
+fido2 = "*"
+qrcode = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.13"
