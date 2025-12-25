@@ -18,7 +18,7 @@ from django.contrib import admin
 from django.urls import path
 
 from django.urls import include
-
+# from medical_imaging import urls
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -28,4 +28,5 @@ urlpatterns = [
 
     # Your app URLs
     path('app/', include('firstapp.urls')),
+    path('api/', include('medical_imaging.urls')),
 ]

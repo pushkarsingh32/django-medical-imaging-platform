@@ -1,0 +1,174 @@
+from django.shortcuts import render
+
+# Create your views here.
+from rest_framework import viewsets, permissions, filters, status
+from rest_framework.decorators import action
+from rest_framework. response import Response
+from django_filters.rest_framework import DjangoFilterBackend
+from django.utils import timezone
+from django.db.models import Count, Q
+
+from .models import Hospital, Patient, ImagingStudy, DicomImage, Diagnosis, AuditLog
+from .serializers import (
+    HospitalSerializer, 
+    PatientListSerializer,
+    PatientDetailSerializer, 
+    ImagingStudyListSerializer, 
+    ImagingStudyDetailSerializer,
+    DicomImageSerializer,
+    DiagnosisSerializer, 
+    AuditLogSerializer
+)
+
+
+class HospitalViewSet(viewsets.ModelViewSet):
+    """
+    API endpoints for hospitals
+    list: GET /api/hospitals/
+    create: POST /api/hospitals/
+    retrieve: GET /api/hospitals/{id}/
+    update: PUT /api/hospitals/{id}/
+    destroy: DELETE /api/hospital/{id}/
+    """
+    queryset = Hospital.objects.all()
+    serializer_class = HospitalSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['name', 'contact_email']
+    ordering_fields = ['name', 'created_at']
+    ordering = ['name']
+
+
+class PatientViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint for patients
+    Uses different serilizers for list vs details views
+    """
+    queryset = Patient.objects.select_related('hospital').all()
+    permission_classes= [permissions.IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['hospital', 'gender']
+    search_fields = ['first_name', 'last_name', 'medical_record_number', 'email']
+    ordering_fields = ['last_name', 'created_at', 'date_of_birth']
+
+    def get_serializer_class(self):
+        """Use Detailed serilizer for single patient view"""
+        if self.action == 'retrieve':
+            return PatientDetailSerializer
+        return PatientListSerializer
+    
+    @action(detail=True, methods=['get'])
+    def studies(self, request, pk=None):
+        """Custom endpoint: GET /api/patients/{id}/studies
+        Returns all imaging studies for a patient
+        """
+        patient = self.get_object()
+        studies = patient.imaging_studies.all()
+        serializer = ImagingStudyListSerializer(studies, many=True)
+        return Response(serializer.data)
+
+
+class ImagingStudyViewSet(viewsets.ModelViewSet):
+      """
+      API endpoint for imaging studies
+      """
+      queryset = ImagingStudy.objects.select_related('patient',
+  'patient__hospital').prefetch_related('images', 'diagnosis').all()
+      permission_classes = [permissions.IsAuthenticated]
+      filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+      filterset_fields = ['patient', 'modality', 'status', 'body_part']
+      search_fields = ['patient__first_name', 'patient__last_name',
+  'patient__medical_record_number', 'body_part', 'clinical_notes']
+      ordering_fields = ['study_date', 'created_at']
+      ordering = ['-study_date']
+
+      def get_serializer_class(self):
+          """Use detailed serializer for single study view"""
+          if self.action == 'retrieve':
+              return ImagingStudyDetailSerializer
+          return ImagingStudyListSerializer
+
+      @action(detail=False, methods=['get'])
+      def pending(self, request):
+          """
+          Custom endpoint: GET /api/studies/pending/
+          Returns studies pending review
+          """
+          pending_studies = self.queryset.filter(status='pending')
+          serializer = self.get_serializer(pending_studies, many=True)
+          return Response(serializer.data)
+
+      @action(detail=False, methods=['get'])
+      def statistics(self, request):
+          """
+          Custom endpoint: GET /api/studies/statistics/
+          Returns summary statistics
+          """
+          stats = {
+              'total_studies': self.queryset.count(),
+              'pending': self.queryset.filter(status='pending').count(),
+              'in_progress': self.queryset.filter(status='in_progress').count(),
+              'completed': self.queryset.filter(status='completed').count(),
+              'by_modality': list(
+                  self.queryset.values('modality').annotate(count=Count('id')).order_by('-count')
+              ),
+          }
+          return Response(stats)
+      
+
+class DicomImageViewSet(viewsets.ModelViewSet):
+      """
+      API endpoint for DICOM images
+      """
+      queryset = DicomImage.objects.select_related('study', 'study__patient').all()
+      serializer_class = DicomImageSerializer
+      permission_classes = [permissions.IsAuthenticated]
+      filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+      filterset_fields = ['study']
+      ordering_fields = ['instance_number', 'uploaded_at']
+      ordering = ['instance_number']
+
+      def perform_create(self, serializer):
+          """Automatically calculate file size when uploading"""
+          instance = serializer.save()
+          if instance.image_file:
+              instance.file_size_bytes = instance.image_file.size
+              instance.save()
+
+
+class DiagnosisViewSet(viewsets.ModelViewSet):
+      """
+      API endpoint for diagnoses
+      """
+      queryset = Diagnosis.objects.select_related('study', 'study__patient', 'radiologist').all()
+      serializer_class = DiagnosisSerializer
+      permission_classes = [permissions.IsAuthenticated]
+      filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+      filterset_fields = ['severity', 'radiologist']
+      search_fields = ['findings', 'impression', 'recommendations']
+      ordering_fields = ['diagnosed_at', 'severity']
+      ordering = ['-diagnosed_at']
+
+      def perform_create(self, serializer):
+          """Automatically set radiologist to current user and update study status"""
+          diagnosis = serializer.save(radiologist=self.request.user)
+          # Update study status to completed
+          diagnosis.study.status = 'completed'
+          diagnosis.study.save()
+
+
+class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
+      """
+      API endpoint for audit logs (read-only for compliance)
+      
+      list:     GET /api/audit-logs/
+      retrieve: GET /api/audit-logs/{id}/
+      """
+      queryset = AuditLog.objects.select_related('user').all()
+      serializer_class = AuditLogSerializer
+      permission_classes = [permissions.IsAuthenticated]
+      filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+      filterset_fields = ['user', 'action', 'resource_type']
+      search_fields = ['resource_type', 'ip_address']
+      ordering_fields = ['timestamp']
+      ordering = ['-timestamp']

@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     # Third-party apps
     'rest_framework',
     'corsheaders',
+    'django_filters',
 
     # Django-allauth
     'allauth',
@@ -56,6 +57,7 @@ INSTALLED_APPS = [
 
     # Your apps
     'firstapp',
+    'medical_imaging'
 ]
 
 MIDDLEWARE = [
@@ -70,6 +72,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
 
 ROOT_URLCONF = 'firstproject.urls'
 
@@ -154,15 +157,40 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Django REST Framework Configuration
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'allauth.headless.rest_framework.authentication.SessionTokenAuthentication',
-    ],
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
-    ],
-}
+# REST_FRAMEWORK = {
+#     'DEFAULT_AUTHENTICATION_CLASSES': [
+#         'allauth.headless.rest_framework.authentication.SessionTokenAuthentication',
+#     ],
+#     'DEFAULT_PERMISSION_CLASSES': [
+#         'rest_framework.permissions.IsAuthenticatedOrReadOnly',
+#     ],
+#     'DEFAULT_FILTER_BACKENDS': [
+#         'django_filters.rest_framework.DjangoFilterBackend',
+#         'rest_framework.filters.SearchFilter',
+#         'rest_framework.filters.OrderingFilter',
+#     ],
+#     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+#     'PAGE_SIZE': 20
+# }
 
+  # Django REST Framework Settings
+REST_FRAMEWORK = {
+      'DEFAULT_AUTHENTICATION_CLASSES': [
+          'rest_framework.authentication.SessionAuthentication',
+           'rest_framework.authentication.BasicAuthentication', 
+      ],
+      'DEFAULT_PERMISSION_CLASSES': [
+        #   'rest_framework.permissions.IsAuthenticatedOrReadOnly',
+               'rest_framework.permissions.AllowAny',  # Change to AllowAny for testing
+      ],
+      'DEFAULT_FILTER_BACKENDS': [
+          'django_filters.rest_framework.DjangoFilterBackend',
+          'rest_framework.filters.SearchFilter',
+          'rest_framework.filters.OrderingFilter',
+      ],
+      'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+      'PAGE_SIZE': 20,
+  }
 # CORS Configuration for Next.js
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
