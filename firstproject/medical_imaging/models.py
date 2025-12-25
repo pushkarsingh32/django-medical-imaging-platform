@@ -128,7 +128,7 @@ class DicomImage(models.Model):
     )
 
     # Simulated DICOM Metadata
-    since_thinkness = models.DecimalField(
+    slice_thickness = models.DecimalField(
         max_digits=5, 
         decimal_places=2,
         null=True, 

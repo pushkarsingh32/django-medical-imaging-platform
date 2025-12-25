@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 
+from decouple import config
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -57,7 +58,8 @@ INSTALLED_APPS = [
 
     # Your apps
     'firstapp',
-    'medical_imaging'
+    'medical_imaging',
+    'storages',
 ]
 
 MIDDLEWARE = [
@@ -150,7 +152,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
-
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
@@ -252,3 +255,36 @@ HEADLESS_TOKEN_STRATEGY = 'allauth.headless.tokens.sessions.SessionTokenStrategy
 
 # Email backend (for development - prints to console)
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+USE_S3 = config('USE_S3', default=True, cast=bool)
+
+if USE_S3:
+      # AWS Credentials (DO NOT commit these to git!)
+      AWS_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID')
+      AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY')
+      AWS_STORAGE_BUCKET_NAME = config('AWS_STORAGE_BUCKET_NAME')
+      AWS_S3_REGION_NAME = config('AWS_S3_REGION_NAME', default='ap-south-1')
+
+      # S3 Settings
+      AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
+      AWS_S3_OBJECT_PARAMETERS = {
+          'CacheControl': 'max-age=86400',  # 1 day cache
+      }
+      AWS_DEFAULT_ACL = None  # Don't set ACL (use bucket policy)
+      AWS_S3_FILE_OVERWRITE = False  # Don't overwrite files with same name
+
+      # Storage backends (Django 5+ format)
+      STORAGES = {
+          "default": {
+              "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+          },
+          "staticfiles": {
+              "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+          },
+      }
+
+      # Media files will be stored at: https://medical-imaging-dev-pushkar.s3.amazonaws.com/dicom_images/...
+      MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/'
+else:
+      # Local storage (development fallback)
+      MEDIA_URL = '/media/'
+      MEDIA_ROOT = BASE_DIR/ 'media'
