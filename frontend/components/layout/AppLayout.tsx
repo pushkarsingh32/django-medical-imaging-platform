@@ -9,6 +9,7 @@ import {
   Users,
   Activity,
   Building2,
+  MessageSquare,
   LogOut,
   Menu,
   X
@@ -31,6 +32,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     { name: 'Patients', href: '/patients', icon: Users },
     { name: 'Studies', href: '/studies', icon: Activity },
     { name: 'Hospitals', href: '/hospitals', icon: Building2 },
+    { name: 'AI Chat', href: '/chat', icon: MessageSquare },
   ];
 
   const isActive = (href: string) => {

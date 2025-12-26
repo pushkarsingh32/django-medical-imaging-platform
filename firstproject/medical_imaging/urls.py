@@ -13,6 +13,7 @@ from .views import (
     modality_distribution,
     recent_activity,
 )
+from .ai_chat_view import chat, chat_stream
 
 
 router = DefaultRouter()
@@ -32,4 +33,7 @@ urlpatterns = [
     path('stats/trends/', study_trends, name='study-trends'),
     path('stats/modality-distribution/', modality_distribution, name='modality-distribution'),
     path('stats/recent-activity/', recent_activity, name='recent-activity'),
+    # AI Chat endpoints
+    path('ai/chat/', chat, name='ai-chat'),
+    path('ai/chat/stream/', chat_stream, name='ai-chat-stream'),
 ]

@@ -73,7 +73,7 @@ export interface ImagingStudyDetail extends ImagingStudy {
   hospital_name: string;
   description?: string;
   diagnosed_at?: string;
-  diagnosis?: string;
+  diagnosis?: Diagnosis;
   referring_physician?: string;
   clinical_notes?: string;
   images?: DicomImage[];

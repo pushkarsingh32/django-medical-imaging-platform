@@ -123,3 +123,38 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Loading Dots Animation */
+@keyframes bounce-delay {
+  0%,
+  80%,
+  100% {
+    transform: scale(0);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1.0);
+    opacity: 1;
+  }
+}
+
+.loading-dot {
+  width: 6px;
+  height: 6px;
+  background-color: currentColor;
+  border-radius: 100%;
+  display: inline-block;
+  animation: bounce-delay 1.4s infinite ease-in-out both;
+}
+
+.loading-dot.dot-1 {
+  animation-delay: -0.32s;
+}
+
+.loading-dot.dot-2 {
+  animation-delay: -0.16s;
+}
+
+.loading-dot.dot-3 {
+  animation-delay: 0s;
+}

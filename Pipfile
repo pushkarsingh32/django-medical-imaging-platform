@@ -16,6 +16,8 @@ python-decouple = "*"
 django-filter = "*"
 django-storages = "*"
 boto3 = "*"
+pydantic = "*"
+openai = "*"
 
 [dev-packages]
 
