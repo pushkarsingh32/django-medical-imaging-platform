@@ -25,22 +25,22 @@ export default function Footer() {
             <h3 className="text-white font-semibold mb-4">Quick Links</h3>
             <ul className="space-y-2">
               <li>
-                <Link href="/" className="text-sm hover:text-primary transition-colors">
+                <Link href="/" className="text-sm text-gray-300 hover:text-white hover:underline cursor-pointer transition-colors">
                   Home
                 </Link>
               </li>
               <li>
-                <Link href="/about" className="text-sm hover:text-primary transition-colors">
+                <Link href="/about" className="text-sm text-gray-300 hover:text-white hover:underline cursor-pointer transition-colors">
                   About Us
                 </Link>
               </li>
               <li>
-                <Link href="/contact" className="text-sm hover:text-primary transition-colors">
+                <Link href="/contact" className="text-sm text-gray-300 hover:text-white hover:underline cursor-pointer transition-colors">
                   Contact
                 </Link>
               </li>
               <li>
-                <Link href="/auth/login" className="text-sm hover:text-primary transition-colors">
+                <Link href="/auth/login" className="text-sm text-gray-300 hover:text-white hover:underline cursor-pointer transition-colors">
                   Login
                 </Link>
               </li>
@@ -85,10 +85,10 @@ export default function Footer() {
               &copy; {currentYear} MediScan. All rights reserved.
             </p>
             <div className="flex gap-6">
-              <Link href="#" className="text-sm hover:text-primary transition-colors">
+              <Link href="#" className="text-sm text-gray-300 hover:text-white hover:underline cursor-pointer transition-colors">
                 Privacy Policy
               </Link>
-              <Link href="#" className="text-sm hover:text-primary transition-colors">
+              <Link href="#" className="text-sm text-gray-300 hover:text-white hover:underline cursor-pointer transition-colors">
                 Terms of Service
               </Link>
             </div>
