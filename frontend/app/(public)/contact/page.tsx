@@ -190,7 +190,7 @@ export default function ContactPage() {
                     />
                   </div>
 
-                  <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
+                  <Button type="submit" size="lg" className="w-full cursor-pointer" disabled={isSubmitting}>
                     {isSubmitting ? (
                       'Sending...'
                     ) : (
