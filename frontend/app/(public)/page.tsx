@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Activity, Shield, Zap, Users, FileImage, BarChart3, ArrowRight, Check } from 'lucide-react';
@@ -95,25 +96,15 @@ export default function HomePage() {
             </div>
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-purple-500/20 rounded-3xl blur-3xl"></div>
-              <div className="relative bg-white/80 backdrop-blur-sm rounded-2xl shadow-2xl p-8 space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Activity className="h-6 w-6 text-primary" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-900">Latest Study</p>
-                    <p className="text-sm text-gray-600">CT Scan - Chest</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="aspect-square bg-gray-200 rounded-lg"></div>
-                  <div className="aspect-square bg-gray-200 rounded-lg"></div>
-                  <div className="aspect-square bg-gray-200 rounded-lg"></div>
-                </div>
-                <div className="space-y-2">
-                  <div className="h-2 bg-gray-200 rounded-full w-full"></div>
-                  <div className="h-2 bg-gray-200 rounded-full w-3/4"></div>
-                </div>
+              <div className="relative">
+                <Image
+                  src="/images/hero-dicom-viewer.png"
+                  alt="MediScan DICOM Viewer Interface - Medical Imaging Platform"
+                  width={600}
+                  height={600}
+                  className="rounded-2xl shadow-2xl"
+                  priority
+                />
               </div>
             </div>
           </div>
