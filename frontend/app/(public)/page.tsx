@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Activity, Shield, Zap, Users, FileImage, BarChart3, ArrowRight, Check } from 'lucide-react';
 
 export default function HomePage() {
@@ -50,7 +50,7 @@ export default function HomePage() {
   return (
     <div className="flex flex-col">
       {/* Hero Section */}
-      <section className="bg-gradient-to-br from-blue-50 via-white to-purple-50 py-20 md:py-32">
+      <section className="bg-linear-to-br from-blue-50 via-white to-purple-50 py-20 md:py-32">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-8">
@@ -95,7 +95,7 @@ export default function HomePage() {
               </div>
             </div>
             <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-purple-500/20 rounded-3xl blur-3xl"></div>
+              <div className="absolute inset-0 bg-linear-to-r from-primary/20 to-purple-500/20 rounded-3xl blur-3xl"></div>
               <div className="relative">
                 <Image
                   src="/images/hero-dicom-viewer.png"
@@ -103,7 +103,7 @@ export default function HomePage() {
                   width={600}
                   height={600}
                   className="rounded-2xl shadow-2xl"
-                  priority
+                  loading="eager"
                 />
               </div>
             </div>
