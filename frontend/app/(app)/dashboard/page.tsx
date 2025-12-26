@@ -222,7 +222,7 @@ export default function DashboardPage() {
           <CardContent>
             {activityLoading ? (
               <div className="space-y-4">
-                {[...Array(5)].map((_, i) => (
+                {[...Array(3)].map((_, i) => (
                   <div key={i} className="flex items-start justify-between p-4 rounded-lg border">
                     <div className="space-y-2 flex-1">
                       <div className="flex items-center gap-2">
