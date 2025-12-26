@@ -12,6 +12,10 @@ mysqlclient = "*"
 requests = "*"
 fido2 = "*"
 qrcode = "*"
+python-decouple = "*"
+django-filter = "*"
+django-storages = "*"
+boto3 = "*"
 
 [dev-packages]
 

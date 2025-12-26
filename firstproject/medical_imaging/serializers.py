@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Hospital, Patient, ImagingStudy, DicomImage, Diagnosis, AuditLog
+from .models import Hospital, Patient, ImagingStudy, DicomImage, Diagnosis, AuditLog, ContactMessage
 from django.contrib.auth.models import User
 
 class HospitalSerializer(serializers.ModelSerializer):
@@ -178,3 +178,20 @@ class UserSerializer(serializers.ModelSerializer):
 
       def get_full_name(self, obj):
           return obj.get_full_name() or obj.username
+
+
+class ContactMessageSerializer(serializers.ModelSerializer):
+    """
+    Serializer for ContactMessage model
+    Public-facing API for contact form submissions
+    """
+    class Meta:
+        model = ContactMessage
+        fields = ['id', 'name', 'email', 'phone', 'subject', 'message', 'created_at']
+        read_only_fields = ['id', 'created_at']
+
+    def validate_message(self, value):
+        """Ensure message is not too short"""
+        if len(value.strip()) < 10:
+            raise serializers.ValidationError("Message must be at least 10 characters long.")
+        return value

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Hospital, Patient, ImagingStudy, DicomImage, Diagnosis, AuditLog
+from .models import Hospital, Patient, ImagingStudy, DicomImage, Diagnosis, AuditLog, ContactMessage
 # Register your models here.
 
 @admin.register(Hospital)
@@ -106,3 +106,31 @@ class AuditLogAdmin(admin.ModelAdmin):
       def has_change_permission(self, request, obj=None):
           # Audit logs should never be modified
           return False
+
+
+@admin.register(ContactMessage)
+class ContactMessageAdmin(admin.ModelAdmin):
+    list_display = ['id', 'name', 'email', 'subject', 'status', 'created_at']
+    search_fields = ['name', 'email', 'subject', 'message']
+    list_filter = ['status', 'created_at']
+    readonly_fields = ['name', 'email', 'phone', 'subject', 'message', 'created_at', 'updated_at']
+
+    fieldsets = (
+        ('Contact Information', {
+            'fields': ('name', 'email', 'phone')
+        }),
+        ('Message', {
+            'fields': ('subject', 'message')
+        }),
+        ('Status & Notes', {
+            'fields': ('status', 'notes')
+        }),
+        ('Metadata', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def has_add_permission(self, request):
+        # Contact messages should only be created through the form, not manually
+        return False

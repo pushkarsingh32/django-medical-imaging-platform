@@ -8,16 +8,17 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
 from django.db.models import Count, Q
 
-from .models import Hospital, Patient, ImagingStudy, DicomImage, Diagnosis, AuditLog
+from .models import Hospital, Patient, ImagingStudy, DicomImage, Diagnosis, AuditLog, ContactMessage
 from .serializers import (
-    HospitalSerializer, 
+    HospitalSerializer,
     PatientListSerializer,
-    PatientDetailSerializer, 
-    ImagingStudyListSerializer, 
+    PatientDetailSerializer,
+    ImagingStudyListSerializer,
     ImagingStudyDetailSerializer,
     DicomImageSerializer,
-    DiagnosisSerializer, 
-    AuditLogSerializer
+    DiagnosisSerializer,
+    AuditLogSerializer,
+    ContactMessageSerializer
 )
 
 
@@ -172,3 +173,30 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
       search_fields = ['resource_type', 'ip_address']
       ordering_fields = ['timestamp']
       ordering = ['-timestamp']
+
+
+class ContactMessageViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint for contact form submissions
+    Publicly accessible (no authentication required)
+    Only allows creating new messages, not viewing/editing
+    """
+    queryset = ContactMessage.objects.all()
+    serializer_class = ContactMessageSerializer
+    permission_classes = [permissions.AllowAny]  # Public endpoint
+    http_method_names = ['post']  # Only allow POST requests
+
+    def create(self, request, *args, **kwargs):
+        """Create a new contact message"""
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+
+        return Response(
+            {
+                'success': True,
+                'message': 'Thank you for contacting us! We will get back to you soon.',
+                'data': serializer.data
+            },
+            status=status.HTTP_201_CREATED
+        )
