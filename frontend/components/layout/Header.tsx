@@ -9,7 +9,6 @@ export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navigation = [
-    { name: 'Home', href: '/' },
     { name: 'About', href: '/about' },
     { name: 'Contact', href: '/contact' },
   ];
@@ -39,10 +38,10 @@ export default function Header() {
             ))}
             <div className="flex items-center gap-4">
               <Link href="/auth/login">
-                <Button variant="ghost">Login</Button>
+                <Button variant="ghost" className="cursor-pointer">Login</Button>
               </Link>
               <Link href="/auth/signup">
-                <Button>Get Started</Button>
+                <Button className="cursor-pointer">Get Started</Button>
               </Link>
             </div>
           </div>
@@ -79,12 +78,12 @@ export default function Header() {
               ))}
               <div className="flex flex-col gap-2 pt-4 border-t">
                 <Link href="/auth/login" onClick={() => setMobileMenuOpen(false)}>
-                  <Button variant="ghost" className="w-full">
+                  <Button variant="ghost" className="w-full cursor-pointer">
                     Login
                   </Button>
                 </Link>
                 <Link href="/auth/signup" onClick={() => setMobileMenuOpen(false)}>
-                  <Button className="w-full">Get Started</Button>
+                  <Button className="w-full cursor-pointer">Get Started</Button>
                 </Link>
               </div>
             </div>

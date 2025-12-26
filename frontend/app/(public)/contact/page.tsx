@@ -268,23 +268,6 @@ export default function ContactPage() {
         </div>
       </section>
 
-      {/* Map Section (Placeholder) */}
-      <section className="py-20 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center space-y-4 mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900">
-              Visit Our Office
-            </h2>
-            <p className="text-lg text-gray-600">
-              Stop by our headquarters for a tour or consultation
-            </p>
-          </div>
-          <div className="bg-gray-200 rounded-2xl h-96 flex items-center justify-center">
-            <p className="text-gray-500">Interactive map would be displayed here</p>
-          </div>
-        </div>
-      </section>
-
       {/* Success/Error Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
