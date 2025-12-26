@@ -247,7 +247,7 @@ class ContactMessage(models.Model):
     class Meta:
         ordering = ['-created_at']
         verbose_name = 'Contact Message'
-        verbose_name_plural = 'Contact Messages'
+        verbose_name_plural = 'Website - Contact Messages'
         indexes = [
             models.Index(fields=['-created_at']),
             models.Index(fields=['status']),
