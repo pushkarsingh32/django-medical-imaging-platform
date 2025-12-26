@@ -32,8 +32,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshSession = useCallback(async () => {
     try {
       const response = await allauth.auth.getSession();
-      if (response.data.user) {
-        setUser(response.data.user);
+      if ((response.data as any)?.user) {
+        setUser((response.data as any).user);
       } else {
         setUser(null);
       }
@@ -52,8 +52,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     try {
       const response = await allauth.auth.login(email, password);
-      if (response.data.user) {
-        setUser(response.data.user);
+      if ((response.data as any)?.user) {
+        setUser((response.data as any).user);
       }
     } catch (error) {
       throw error;
@@ -63,8 +63,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signup = async (email: string, password: string) => {
     try {
       const response = await allauth.auth.signup(email, password);
-      if (response.data.user) {
-        setUser(response.data.user);
+      if ((response.data as any)?.user) {
+        setUser((response.data as any).user);
       }
     } catch (error) {
       throw error;
