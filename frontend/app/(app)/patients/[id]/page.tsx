@@ -50,25 +50,19 @@ export default function PatientDetailPage() {
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="outline" size="icon" onClick={() => router.back()}>
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">{patient.full_name}</h1>
-              <p className="text-muted-foreground">MRN: {patient.medical_record_number}</p>
-            </div>
-          </div>
-          <Button onClick={() => router.push(`/patients/${patientId}/edit`)}>
-            <Pencil className="mr-2 h-4 w-4" />
-            Edit Patient
+        <div className="flex items-center gap-4">
+          <Button variant="outline" size="icon" onClick={() => router.back()}>
+            <ArrowLeft className="h-4 w-4" />
           </Button>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">{patient.full_name}</h1>
+            <p className="text-muted-foreground">MRN: {patient.medical_record_number}</p>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Patient Information */}
-          <Card className="lg:col-span-1">
+          <Card className="lg:col-span-1 group relative">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <User className="h-5 w-5" />
@@ -76,6 +70,15 @@ export default function PatientDetailPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => router.push(`/patients/${patientId}/edit`)}
+                className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <Pencil className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
               <div className="flex items-center gap-3 text-sm">
                 <Calendar className="h-4 w-4 text-muted-foreground" />
                 <div>
