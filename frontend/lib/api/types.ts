@@ -87,8 +87,25 @@ export interface DicomImage {
   instance_number: number;
   image_file: string;
   image_url: string;
+
+  // DICOM metadata
+  is_dicom: boolean;
   slice_thickness?: number;
   pixel_spacing?: string;
+  slice_location?: number;
+  rows?: number;
+  columns?: number;
+  bits_allocated?: number;
+  bits_stored?: number;
+  window_center?: string;
+  window_width?: string;
+  rescale_intercept?: number;
+  rescale_slope?: number;
+  manufacturer?: string;
+  manufacturer_model?: string;
+  sop_instance_uid?: string;
+  dicom_metadata?: any; // Full DICOM tags as JSON
+
   file_size_bytes: number;
   uploaded_at: string;
 }

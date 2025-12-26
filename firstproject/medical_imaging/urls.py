@@ -14,6 +14,15 @@ from .views import (
     recent_activity,
 )
 from .ai_chat_view import chat, chat_stream
+from .image_views import (
+    serve_thumbnail,
+    serve_preview,
+    serve_webp,
+    serve_full_image,
+    image_metadata,
+    invalidate_cache,
+    cache_statistics,
+)
 
 
 router = DefaultRouter()
@@ -36,4 +45,12 @@ urlpatterns = [
     # AI Chat endpoints
     path('ai/chat/', chat, name='ai-chat'),
     path('ai/chat/stream/', chat_stream, name='ai-chat-stream'),
+    # Image serving endpoints with progressive loading
+    path('images/<int:image_id>/thumbnail/', serve_thumbnail, name='image-thumbnail'),
+    path('images/<int:image_id>/preview/', serve_preview, name='image-preview'),
+    path('images/<int:image_id>/webp/', serve_webp, name='image-webp'),
+    path('images/<int:image_id>/full/', serve_full_image, name='image-full'),
+    path('images/<int:image_id>/metadata/', image_metadata, name='image-metadata'),
+    path('images/<int:image_id>/invalidate-cache/', invalidate_cache, name='invalidate-cache'),
+    path('images/cache-stats/', cache_statistics, name='cache-statistics'),
 ]

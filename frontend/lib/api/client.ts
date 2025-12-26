@@ -33,10 +33,14 @@ class ApiClient {
     this.client.interceptors.response.use(
       (response) => response,
       (error) => {
-        // Handle common errors
-        if (error.response?.status === 401) {
-          // Redirect to login or refresh token
-          console.error('Unauthorized');
+        // Handle authentication errors
+        if (error.response?.status === 401 || error.response?.status === 403) {
+          // Only redirect if we're in the browser
+          if (typeof window !== 'undefined') {
+            // Save current path to redirect back after login
+            const currentPath = window.location.pathname;
+            window.location.href = `/auth/login?redirect=${encodeURIComponent(currentPath)}`;
+          }
         }
         return Promise.reject(error);
       }

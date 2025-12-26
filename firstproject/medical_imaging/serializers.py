@@ -81,14 +81,29 @@ class PatientDetailSerializer(serializers.ModelSerializer):
 
 class DicomImageSerializer(serializers.ModelSerializer):
       """
-      Serializer for DICOM images
+      Serializer for DICOM images with full metadata support
       """
       image_url = serializers.SerializerMethodField()
 
       class Meta:
           model = DicomImage
-          fields = ['id', 'study', 'instance_number', 'image_file', 'image_url',
-                    'slice_thickness', 'pixel_spacing', 'file_size_bytes', 'uploaded_at']
+          fields = [
+              'id', 'study', 'instance_number', 'image_file', 'image_url',
+              # Spatial metadata
+              'slice_thickness', 'pixel_spacing', 'slice_location',
+              # Image properties
+              'rows', 'columns', 'bits_allocated', 'bits_stored',
+              # Display parameters
+              'window_center', 'window_width', 'rescale_intercept', 'rescale_slope',
+              # Equipment info
+              'manufacturer', 'manufacturer_model',
+              # DICOM identifiers
+              'sop_instance_uid',
+              # Full metadata
+              'dicom_metadata',
+              # File info
+              'file_size_bytes', 'is_dicom', 'uploaded_at'
+          ]
           read_only_fields = ['uploaded_at', 'file_size_bytes']
 
       def get_image_url(self, obj):

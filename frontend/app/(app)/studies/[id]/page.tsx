@@ -14,6 +14,8 @@ import Image from 'next/image';
 import { studyService } from '@/lib/api';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import ProgressiveImage from '@/components/ProgressiveImage';
+import DicomMetadataViewer from '@/components/DicomMetadataViewer';
 
 export default function StudyDetailPage() {
   const router = useRouter();
@@ -104,14 +106,26 @@ export default function StudyDetailPage() {
     });
 
     try {
-      await studyService.uploadImages(studyId, formData);
+      const response = await studyService.uploadImages(studyId, formData);
       // Refresh images
       queryClient.invalidateQueries({ queryKey: studyKeys.images(studyId) });
       // Reset file input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
-      toast.success(`${files.length} image(s) uploaded successfully!`);
+
+      // Show appropriate message based on response
+      if (response.skipped && response.skipped.length > 0) {
+        // Some files were skipped (duplicates)
+        if (response.images && response.images.length > 0) {
+          toast.success(response.message || `${response.images.length} image(s) uploaded, ${response.skipped.length} skipped (duplicates)`);
+        } else {
+          toast.warning(response.message || `All ${response.skipped.length} image(s) skipped (duplicates already exist)`);
+        }
+      } else {
+        // All images uploaded successfully
+        toast.success(response.message || `${response.images?.length || files.length} image(s) uploaded successfully!`);
+      }
     } catch (error) {
       console.error('Upload error:', error);
       toast.error('Failed to upload images. Please try again.');
@@ -452,22 +466,17 @@ export default function StudyDetailPage() {
                   {images.map((image: any) => (
                     <div
                       key={image.id}
-                      className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary transition-all"
-                      onClick={() => setSelectedImage(image)}
+                      className="relative aspect-square rounded-lg overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary transition-all"
                     >
-                      {image.image_url ? (
-                        <Image
-                          src={image.image_url}
-                          alt={`Image ${image.instance_number}`}
-                          fill
-                          className="object-cover"
-                          sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <FileImage className="h-12 w-12 text-muted-foreground" />
-                        </div>
-                      )}
+                      <ProgressiveImage
+                        imageId={image.id}
+                        alt={`Image ${image.instance_number}`}
+                        fill={true}
+                        sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                        onClick={() => setSelectedImage(image)}
+                        className="aspect-square"
+                        isModal={false}
+                      />
                       <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-2">
                         Image {image.instance_number}
                       </div>
@@ -501,27 +510,46 @@ export default function StudyDetailPage() {
           </CardContent>
         </Card>
 
-        {/* Image Modal */}
+        {/* Image Modal with DICOM Metadata */}
         {selectedImage && (
           <div
             className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
             onClick={() => setSelectedImage(null)}
           >
-            <div className="relative max-w-4xl max-h-[90vh] w-full h-full">
-              <Image
-                src={selectedImage.image_url}
-                alt={`Image ${selectedImage.instance_number}`}
-                fill
-                className="object-contain"
-                sizes="90vw"
-              />
-              <Button
-                className="absolute top-4 right-4"
-                variant="secondary"
-                onClick={() => setSelectedImage(null)}
-              >
-                Close
-              </Button>
+            <div className="max-w-7xl w-full h-[90vh] flex gap-4" onClick={(e) => e.stopPropagation()}>
+              {/* Image Viewer */}
+              <div className="relative flex-1 bg-black rounded-lg overflow-hidden">
+                <ProgressiveImage
+                  imageId={selectedImage.id}
+                  alt={`Image ${selectedImage.instance_number}`}
+                  fill={true}
+                  sizes="60vw"
+                  thumbnailClassName="object-contain"
+                  className="w-full h-full"
+                  priority={true}
+                  isModal={true}
+                />
+                <div className="absolute bottom-4 left-4 bg-black/60 text-white text-sm px-3 py-2 rounded">
+                  Image {selectedImage.instance_number}
+                </div>
+              </div>
+
+              {/* DICOM Metadata Panel */}
+              <div className="w-96 bg-background rounded-lg overflow-y-auto">
+                <div className="p-4 border-b flex items-center justify-between sticky top-0 bg-background z-10">
+                  <h3 className="font-semibold">Image Details</h3>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setSelectedImage(null)}
+                  >
+                    Close
+                  </Button>
+                </div>
+                <div className="p-4">
+                  <DicomMetadataViewer image={selectedImage} />
+                </div>
+              </div>
             </div>
           </div>
         )}

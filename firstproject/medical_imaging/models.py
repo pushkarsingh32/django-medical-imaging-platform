@@ -15,8 +15,12 @@ class Hospital(models.Model):
     contact_phone = models.CharField(max_length=20)
     created_at= models.DateTimeField(auto_now_add=True)
 
-    class Meta: 
+    class Meta:
         ordering= ['name']
+        indexes = [
+            models.Index(fields=['name']),  # Fast hospital lookup
+            models.Index(fields=['created_at']),  # For recent hospitals query
+        ]
 
     def __str__(self):
         return self.name
@@ -49,11 +53,15 @@ class Patient(models.Model):
     created_at= models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    class Meta: 
+    class Meta:
         ordering = ['last_name', 'first_name']
         indexes = [
-            models.Index(fields=['medical_record_number']),
-            models.Index(fields= ['hospital', 'last_name']),
+            models.Index(fields=['medical_record_number']),  # Unique lookup
+            models.Index(fields=['hospital', 'last_name']),  # Hospital patient list
+            models.Index(fields=['hospital', 'created_at']),  # Recent patients per hospital
+            models.Index(fields=['gender']),  # Gender filtering
+            models.Index(fields=['date_of_birth']),  # Age-based queries
+            models.Index(fields=['email']),  # Email lookup for patient portal
         ]
 
     def __str__(self):
@@ -97,12 +105,16 @@ class ImagingStudy(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    class Meta: 
+    class Meta:
         ordering = ['-study_date']
         verbose_name_plural = 'Imaging Studies'
         indexes=[
-            models.Index(fields=['patient', '-study_date']),
-            models.Index(fields=['status']),
+            models.Index(fields=['patient', '-study_date']),  # Patient study history
+            models.Index(fields=['status']),  # Status filtering
+            models.Index(fields=['modality', '-study_date']),  # Modality-based queries
+            models.Index(fields=['status', '-study_date']),  # Pending studies, etc.
+            models.Index(fields=['-study_date']),  # Recent studies
+            models.Index(fields=['body_part']),  # Body part filtering
         ]
 
     def __str__(self):
@@ -111,12 +123,12 @@ class ImagingStudy(models.Model):
 
 class DicomImage(models.Model):
     """
-    Individual image file within a study
-    In real system: would parse DICOM metadate
+    Individual DICOM image file within a study.
+    Stores actual DICOM metadata parsed from files using pydicom.
     """
 
     study = models.ForeignKey(
-        ImagingStudy, 
+        ImagingStudy,
         on_delete=models.CASCADE,
         related_name='images'
     )
@@ -124,25 +136,79 @@ class DicomImage(models.Model):
     image_file = models.FileField(upload_to='dicom_image/%Y/%m/%d/')
     instance_number = models.IntegerField(
         validators=[MinValueValidator(1)],
-        help_text='Image sequence numer in study'
+        help_text='Image sequence number in study'
     )
 
-    # Simulated DICOM Metadata
+    # DICOM Metadata (Spatial Information)
     slice_thickness = models.DecimalField(
-        max_digits=5, 
+        max_digits=5,
         decimal_places=2,
-        null=True, 
-        blank=True, 
-        help_text='in mm'
+        null=True,
+        blank=True,
+        help_text='Slice thickness in mm'
+    )
+    pixel_spacing = models.CharField(max_length=50, blank=True, help_text='Pixel spacing (row, column)')
+    slice_location = models.FloatField(
+        null=True,
+        blank=True,
+        help_text='Slice location in mm'
     )
 
-    pixel_spacing = models.CharField(max_length=50, blank=True)
+    # DICOM Image Properties
+    rows = models.IntegerField(null=True, blank=True, help_text='Image height in pixels')
+    columns = models.IntegerField(null=True, blank=True, help_text='Image width in pixels')
+    bits_allocated = models.IntegerField(null=True, blank=True, help_text='Bits allocated per pixel')
+    bits_stored = models.IntegerField(null=True, blank=True, help_text='Bits stored per pixel')
+
+    # DICOM Display Parameters (Window/Level for CT/MRI)
+    window_center = models.CharField(max_length=50, blank=True, help_text='Window center for display')
+    window_width = models.CharField(max_length=50, blank=True, help_text='Window width for display')
+    rescale_intercept = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        help_text='Rescale intercept for Hounsfield units'
+    )
+    rescale_slope = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=1,
+        help_text='Rescale slope for Hounsfield units'
+    )
+
+    # DICOM Equipment Info
+    manufacturer = models.CharField(max_length=200, blank=True, help_text='Equipment manufacturer')
+    manufacturer_model = models.CharField(max_length=200, blank=True, help_text='Equipment model')
+
+    # DICOM Unique Identifiers
+    sop_instance_uid = models.CharField(
+        max_length=200,
+        blank=True,
+        unique=True,
+        null=True,
+        help_text='SOP Instance UID (unique DICOM identifier)'
+    )
+
+    # Full DICOM metadata (JSON storage for all tags)
+    dicom_metadata = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text='Complete DICOM metadata as JSON'
+    )
+
+    # File information
     file_size_bytes = models.BigIntegerField(default=0)
+    is_dicom = models.BooleanField(default=False, help_text='True if file is valid DICOM format')
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
-    class Meta: 
+    class Meta:
         ordering =  ['instance_number']
         unique_together = ['study', 'instance_number']
+        indexes = [
+            models.Index(fields=['study', 'instance_number']),  # Fast image lookup
+            models.Index(fields=['-uploaded_at']),  # Recent uploads
+            models.Index(fields=['file_size_bytes']),  # Size-based queries
+        ]
 
     def __str__(self):
         return f"{self.study} - Image {self.instance_number}"
@@ -180,6 +246,11 @@ class Diagnosis(models.Model):
       class Meta:
           ordering = ['-diagnosed_at']
           verbose_name_plural = 'Diagnoses'
+          indexes = [
+              models.Index(fields=['-diagnosed_at']),  # Recent diagnoses
+              models.Index(fields=['severity', '-diagnosed_at']),  # Urgent cases
+              models.Index(fields=['radiologist', '-diagnosed_at']),  # Radiologist workload
+          ]
 
       def __str__(self):
           return f"Diagnosis for {self.study}"

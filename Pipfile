@@ -18,6 +18,12 @@ django-storages = "*"
 boto3 = "*"
 pydantic = "*"
 openai = "*"
+django-redis = "*"
+redis = "*"
+pillow = "*"
+pydicom = "*"
+numpy = "*"
+pillow-heif = "*"
 
 [dev-packages]
 
