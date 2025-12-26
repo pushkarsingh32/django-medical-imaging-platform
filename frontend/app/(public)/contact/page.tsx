@@ -81,131 +81,128 @@ export default function ContactPage() {
 
       {/* Contact Form */}
       <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-            {/* Form */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-2xl">Send us a Message</CardTitle>
-                <CardDescription>
-                  Fill out the form below and we'll get back to you within 24 hours
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="name">Full Name *</Label>
-                      <Input
-                        id="name"
-                        type="text"
-                        placeholder="John Doe"
-                        value={formData.name}
-                        onChange={(e) => handleChange('name', e.target.value)}
-                        required
-                        className="mt-2"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="email">Email Address *</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="john@example.com"
-                        value={formData.email}
-                        onChange={(e) => handleChange('email', e.target.value)}
-                        required
-                        className="mt-2"
-                      />
-                    </div>
-                  </div>
-
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Form */}
+          <Card className="mb-12">
+            <CardHeader>
+              <CardTitle className="text-2xl">Send us a Message</CardTitle>
+              <CardDescription>
+                Fill out the form below and we'll get back to you within 24 hours
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="subject">Subject *</Label>
+                    <Label htmlFor="name">Full Name *</Label>
                     <Input
-                      id="subject"
+                      id="name"
                       type="text"
-                      placeholder="How can we help?"
-                      value={formData.subject}
-                      onChange={(e) => handleChange('subject', e.target.value)}
+                      placeholder="John Doe"
+                      value={formData.name}
+                      onChange={(e) => handleChange('name', e.target.value)}
                       required
                       className="mt-2"
                     />
                   </div>
-
                   <div>
-                    <Label htmlFor="message">Message *</Label>
-                    <Textarea
-                      id="message"
-                      placeholder="Tell us more about your inquiry..."
-                      value={formData.message}
-                      onChange={(e) => handleChange('message', e.target.value)}
+                    <Label htmlFor="email">Email Address *</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="john@example.com"
+                      value={formData.email}
+                      onChange={(e) => handleChange('email', e.target.value)}
                       required
-                      rows={6}
                       className="mt-2"
                     />
                   </div>
+                </div>
 
-                  <Button type="submit" size="lg" className="w-full cursor-pointer" disabled={isSubmitting}>
-                    {isSubmitting ? (
-                      'Sending...'
-                    ) : (
-                      <>
-                        <Send className="mr-2 h-4 w-4" />
-                        Send Message
-                      </>
-                    )}
-                  </Button>
-                </form>
+                <div>
+                  <Label htmlFor="subject">Subject *</Label>
+                  <Input
+                    id="subject"
+                    type="text"
+                    placeholder="How can we help?"
+                    value={formData.subject}
+                    onChange={(e) => handleChange('subject', e.target.value)}
+                    required
+                    className="mt-2"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="message">Message *</Label>
+                  <Textarea
+                    id="message"
+                    placeholder="Tell us more about your inquiry..."
+                    value={formData.message}
+                    onChange={(e) => handleChange('message', e.target.value)}
+                    required
+                    rows={6}
+                    className="mt-2"
+                  />
+                </div>
+
+                <Button type="submit" size="lg" className="w-full cursor-pointer" disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    'Sending...'
+                  ) : (
+                    <>
+                      <Send className="mr-2 h-4 w-4" />
+                      Send Message
+                    </>
+                  )}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          {/* Additional Info */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <Card className="border-2 border-primary/20 bg-primary/5">
+              <CardHeader>
+                <CardTitle className="text-xl">Need Immediate Help?</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-gray-600">
+                  For urgent technical support or critical issues, please call our
+                  24/7 emergency support line:
+                </p>
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Phone className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900">Emergency Support</p>
+                    <p className="text-primary font-semibold">+1 (555) 911-HELP</p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
-            {/* Additional Info */}
-            <div className="space-y-8">
-              <Card className="border-2 border-primary/20 bg-primary/5">
-                <CardHeader>
-                  <CardTitle className="text-xl">Need Immediate Help?</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="text-gray-600">
-                    For urgent technical support or critical issues, please call our
-                    24/7 emergency support line:
-                  </p>
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Phone className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-gray-900">Emergency Support</p>
-                      <p className="text-primary font-semibold">+1 (555) 911-HELP</p>
-                    </div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-xl">Sales Inquiries</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-gray-600">
+                  Interested in MediScan for your healthcare facility? Our sales
+                  team is ready to help you get started.
+                </p>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-primary" />
+                    <span className="text-sm text-gray-700">sales@mediscan.com</span>
                   </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-xl">Sales Inquiries</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="text-gray-600">
-                    Interested in MediScan for your healthcare facility? Our sales
-                    team is ready to help you get started.
-                  </p>
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-primary" />
-                      <span className="text-sm text-gray-700">sales@mediscan.com</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Phone className="h-4 w-4 text-primary" />
-                      <span className="text-sm text-gray-700">+1 (555) 123-SALE</span>
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-4 w-4 text-primary" />
+                    <span className="text-sm text-gray-700">+1 (555) 123-SALE</span>
                   </div>
-                </CardContent>
-              </Card>
-
-            </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>
