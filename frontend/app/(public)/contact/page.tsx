@@ -249,20 +249,6 @@ export default function ContactPage() {
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-xl">Technical Support</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="text-gray-600">
-                    Existing customers can access our knowledge base or submit a
-                    support ticket through the customer portal.
-                  </p>
-                  <Button variant="outline" className="w-full">
-                    Visit Support Portal
-                  </Button>
-                </CardContent>
-              </Card>
             </div>
           </div>
         </div>
