@@ -175,21 +175,17 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
       ordering = ['-timestamp']
 
 
-from django.views.decorators.csrf import csrf_exempt
-from django.utils.decorators import method_decorator
-
-
-@method_decorator(csrf_exempt, name='dispatch')
 class ContactMessageViewSet(viewsets.ModelViewSet):
     """
     API endpoint for contact form submissions
     Publicly accessible (no authentication required)
     Only allows creating new messages, not viewing/editing
-    CSRF exempt for public form submissions from frontend
+    No authentication required - public endpoint
     """
     queryset = ContactMessage.objects.all()
     serializer_class = ContactMessageSerializer
     permission_classes = [permissions.AllowAny]  # Public endpoint
+    authentication_classes = []  # Disable authentication (and CSRF) for this endpoint
     http_method_names = ['post']  # Only allow POST requests
 
     def create(self, request, *args, **kwargs):
