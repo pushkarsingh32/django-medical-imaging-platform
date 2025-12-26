@@ -13,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Mail, Phone, MapPin, Clock, Send, CheckCircle2, XCircle } from 'lucide-react';
+import { Mail, Phone, Send, CheckCircle2, XCircle } from 'lucide-react';
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -63,28 +63,6 @@ export default function ContactPage() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const contactInfo = [
-    {
-      icon: MapPin,
-      title: 'Address',
-      content: '123 Medical Center Drive\nHealthcare City, HC 12345\nUnited States',
-    },
-    {
-      icon: Phone,
-      title: 'Phone',
-      content: '+1 (555) 123-4567\n+1 (555) 123-4568',
-    },
-    {
-      icon: Mail,
-      title: 'Email',
-      content: 'info@mediscan.com\nsupport@mediscan.com',
-    },
-    {
-      icon: Clock,
-      title: 'Business Hours',
-      content: 'Monday - Friday: 9:00 AM - 6:00 PM\nSaturday: 10:00 AM - 4:00 PM\nSunday: Closed',
-    },
-  ];
 
   return (
     <div className="flex flex-col">
@@ -101,31 +79,9 @@ export default function ContactPage() {
         </div>
       </section>
 
-      {/* Contact Info Cards */}
+      {/* Contact Form */}
       <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
-            {contactInfo.map((info, index) => {
-              const Icon = info.icon;
-              return (
-                <Card key={index} className="text-center">
-                  <CardHeader>
-                    <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
-                      <Icon className="h-6 w-6 text-primary" />
-                    </div>
-                    <CardTitle className="text-lg">{info.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-gray-600 whitespace-pre-line">
-                      {info.content}
-                    </p>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-
-          {/* Contact Form */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
             {/* Form */}
             <Card>
