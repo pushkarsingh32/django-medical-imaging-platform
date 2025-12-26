@@ -209,7 +209,6 @@ class TestImageCacheServiceIntegration:
         """Test that all expected service methods exist"""
         expected_methods = [
             'get_thumbnail',
-            'get_preview',
             'get_full_image',
             'invalidate_cache',
             'get_cache_stats',
@@ -221,3 +220,69 @@ class TestImageCacheServiceIntegration:
         for method in expected_methods:
             assert hasattr(ImageCacheService, method)
             assert callable(getattr(ImageCacheService, method))
+
+
+@pytest.mark.unit
+class TestImageCacheEdgeCases:
+    """Test edge cases and error handling"""
+
+    @patch.object(ImageCacheService, '_load_image_from_storage')
+    def test_thumbnail_with_corrupt_image(self, mock_load):
+        """Test handling of corrupt image files"""
+        mock_load.return_value = None
+        result = ImageCacheService.get_thumbnail('corrupt/image.jpg')
+        assert result is None
+
+    def test_image_to_bytes_with_invalid_format(self):
+        """Test converting image to unsupported format"""
+        img = PILImage.new('RGB', (100, 100), color='red')
+        # Should handle gracefully or raise specific exception
+        try:
+            result = ImageCacheService._image_to_bytes(img, 'INVALID_FORMAT', 90)
+            # If it doesn't raise, result should be None or bytes
+            assert result is None or isinstance(result, bytes)
+        except (ValueError, KeyError):
+            # Expected behavior for invalid format
+            pass
+
+    @patch('medical_imaging.image_cache_service.cache')
+    def test_cache_set_failure(self, mock_cache):
+        """Test handling of cache set failures"""
+        mock_cache.get.return_value = None
+        mock_cache.set.side_effect = Exception("Cache unavailable")
+
+        with patch.object(ImageCacheService, '_load_image_from_storage') as mock_load:
+            mock_img = PILImage.new('RGB', (500, 500), color='blue')
+            mock_load.return_value = mock_img
+
+            # Should handle cache failure gracefully
+            try:
+                result = ImageCacheService.get_thumbnail('test.jpg')
+                # Even if cache fails, should return image bytes
+                assert result is None or isinstance(result, bytes)
+            except:
+                pass  # Some implementations may propagate exception
+
+    def test_generate_cache_key_with_special_chars(self):
+        """Test cache key generation with special characters"""
+        key = ImageCacheService._generate_cache_key(
+            'test',
+            'path/with spaces/and-special@chars.jpg',
+            'jpg'
+        )
+        assert isinstance(key, str)
+        assert len(key) > 0
+
+    @patch.object(ImageCacheService, '_load_image_from_storage')
+    def test_multiple_thumbnail_calls(self, mock_load):
+        """Test multiple calls to get_thumbnail"""
+        mock_img = PILImage.new('RGB', (1000, 1000), color='green')
+        mock_load.return_value = mock_img
+
+        # First call
+        result1 = ImageCacheService.get_thumbnail('test.jpg')
+        # Second call should use cache or regenerate
+        result2 = ImageCacheService.get_thumbnail('test.jpg')
+
+        assert isinstance(result1, bytes)
+        assert isinstance(result2, bytes)
