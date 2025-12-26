@@ -32,6 +32,18 @@ export default function ContactPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Client-side validation
+    if (formData.message.trim().length < 10) {
+      setDialogContent({
+        type: 'error',
+        title: 'Validation Error',
+        message: 'Message must be at least 10 characters long.',
+      });
+      setDialogOpen(true);
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -213,6 +225,7 @@ export default function ContactPage() {
                       value={formData.message}
                       onChange={(e) => handleChange('message', e.target.value)}
                       required
+                      minLength={10}
                       rows={8}
                       className="resize-none"
                     />
