@@ -79,8 +79,9 @@ class HttpClient {
     const data = await response.json();
 
     if (!response.ok) {
+      console.error('API Error:', { status: response.status, data });
       throw new Error(
-        data.errors?.[0]?.message || `Request failed with status ${response.status}`
+        data.errors?.[0]?.message || data.message || `Request failed with status ${response.status}`
       );
     }
 
