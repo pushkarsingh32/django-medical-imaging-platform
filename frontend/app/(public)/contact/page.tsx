@@ -83,7 +83,7 @@ export default function ContactPage() {
       <section className="py-20 bg-white">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Form */}
-          <Card className="mb-12">
+          <Card className="mb-20">
             <CardHeader>
               <CardTitle className="text-2xl">Send us a Message</CardTitle>
               <CardDescription>
