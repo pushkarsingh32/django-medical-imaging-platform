@@ -26,7 +26,7 @@ export const studyService = {
    * Get images for a study
    */
   getImages: (id: number): Promise<any[]> => {
-    return apiClient.get(`/studies/${id}/images/`);
+    return apiClient.get(`/images/`, { study: id });
   },
 
   /**
