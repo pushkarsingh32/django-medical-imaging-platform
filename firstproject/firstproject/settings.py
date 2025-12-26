@@ -57,7 +57,6 @@ INSTALLED_APPS = [
     # 'allauth.socialaccount.providers.github',
 
     # Your apps
-    'firstapp',
     'medical_imaging',
     'storages',
 ]

@@ -27,7 +27,6 @@ urlpatterns = [
     path('_allauth/', include('allauth.headless.urls')),
 
     # Your app URLs
-    path('app/', include('firstapp.urls')),
     path('api/', include('medical_imaging.urls')),
 ]
 
