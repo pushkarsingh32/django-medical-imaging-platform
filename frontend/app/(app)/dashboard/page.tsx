@@ -132,8 +132,8 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               {trendsLoading ? (
-                <div className="flex items-center justify-center h-[300px]">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                <div className="space-y-3">
+                  <Skeleton className="h-[300px] w-full" />
                 </div>
               ) : trends && trends.length > 0 ? (
                 <ResponsiveContainer width="100%" height={300}>
@@ -171,8 +171,8 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               {modalityLoading ? (
-                <div className="flex items-center justify-center h-[300px]">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                <div className="space-y-3">
+                  <Skeleton className="h-[300px] w-full" />
                 </div>
               ) : modality && modality.length > 0 ? (
                 <ResponsiveContainer width="100%" height={300}>
@@ -221,8 +221,23 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             {activityLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <div className="space-y-4">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="flex items-start justify-between p-4 rounded-lg border">
+                    <div className="space-y-2 flex-1">
+                      <div className="flex items-center gap-2">
+                        <Skeleton className="h-5 w-16" />
+                        <Skeleton className="h-5 w-24" />
+                      </div>
+                      <Skeleton className="h-4 w-48" />
+                      <Skeleton className="h-3 w-32" />
+                    </div>
+                    <div className="space-y-2">
+                      <Skeleton className="h-5 w-20" />
+                      <Skeleton className="h-3 w-24" />
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : activity && activity.length > 0 ? (
               <div className="space-y-4">
