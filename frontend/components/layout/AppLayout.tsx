@@ -59,7 +59,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="flex items-center justify-between p-6 border-b">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 select-none">
               <Activity className="h-6 w-6 text-primary" />
               <span className="font-bold text-lg">MediScan</span>
             </div>
@@ -82,7 +82,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   key={item.name}
                   href={item.href}
                   onClick={() => setSidebarOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors select-none ${
                     active
                       ? 'bg-primary text-primary-foreground'
                       : 'text-muted-foreground hover:bg-muted hover:text-foreground'
@@ -97,7 +97,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
           {/* User section */}
           <div className="p-4 border-t">
-            <div className="flex items-center gap-3 px-4 py-2 mb-2">
+            <div className="flex items-center gap-3 px-4 py-2 mb-2 select-none">
               <div className="flex-1">
                 <p className="text-sm font-medium">{user?.email}</p>
                 <p className="text-xs text-muted-foreground">Logged in</p>
@@ -123,7 +123,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <button onClick={() => setSidebarOpen(true)}>
               <Menu className="h-6 w-6" />
             </button>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 select-none">
               <Activity className="h-5 w-5 text-primary" />
               <span className="font-bold">MediScan</span>
             </div>

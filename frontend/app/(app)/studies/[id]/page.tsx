@@ -1,38 +1,123 @@
 'use client';
 
-import { useState } from 'react';
-import { useStudy, useStudyImages, useAddDiagnosis } from '@/lib/hooks/useStudies';
+import { useState, useRef } from 'react';
+import { useStudy, useStudyImages, useAddDiagnosis, useUpdateDiagnosis, studyKeys } from '@/lib/hooks/useStudies';
 import { useRouter, useParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Loader2, ArrowLeft, User, Calendar, Building2, Activity, FileImage, FilePlus } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Loader2, ArrowLeft, User, Calendar, Building2, Activity, FileImage, Upload, FilePlus, Pencil } from 'lucide-react';
 import Image from 'next/image';
+import { studyService } from '@/lib/api';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 export default function StudyDetailPage() {
   const router = useRouter();
   const params = useParams();
   const studyId = Number(params.id);
+  const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: study, isLoading: studyLoading, error: studyError } = useStudy(studyId);
   const { data: images, isLoading: imagesLoading } = useStudyImages(studyId);
   const addDiagnosis = useAddDiagnosis(studyId);
+  const updateDiagnosis = useUpdateDiagnosis(studyId);
+
+  // Debug: Log images data
+  console.log('Images data:', images);
+  console.log('Images loading:', imagesLoading);
+  console.log('Is array?', Array.isArray(images));
+  console.log('Images length:', images?.length);
 
   const [showDiagnosisForm, setShowDiagnosisForm] = useState(false);
-  const [diagnosisText, setDiagnosisText] = useState('');
+  const [isEditingDiagnosis, setIsEditingDiagnosis] = useState(false);
+  const [diagnosisData, setDiagnosisData] = useState({
+    findings: '',
+    impression: '',
+    severity: 'normal',
+    recommendations: '',
+  });
   const [selectedImage, setSelectedImage] = useState<any>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
-  const handleAddDiagnosis = async () => {
-    if (!diagnosisText.trim()) return;
+  const handleEditDiagnosis = () => {
+    if (study?.diagnosis) {
+      setDiagnosisData({
+        findings: study.diagnosis.findings || '',
+        impression: study.diagnosis.impression || '',
+        severity: study.diagnosis.severity || 'normal',
+        recommendations: study.diagnosis.recommendations || '',
+      });
+      setIsEditingDiagnosis(true);
+      setShowDiagnosisForm(true);
+    }
+  };
 
-    await addDiagnosis.mutateAsync({
-      diagnosis: diagnosisText,
+  const handleSaveDiagnosis = async () => {
+    if (!diagnosisData.findings.trim()) return;
+
+    if (isEditingDiagnosis && study?.diagnosis?.id) {
+      // Update existing diagnosis
+      await updateDiagnosis.mutateAsync({
+        diagnosisId: study.diagnosis.id,
+        data: diagnosisData,
+      });
+    } else {
+      // Add new diagnosis
+      await addDiagnosis.mutateAsync(diagnosisData);
+    }
+
+    setDiagnosisData({
+      findings: '',
+      impression: '',
+      severity: 'normal',
+      recommendations: '',
+    });
+    setShowDiagnosisForm(false);
+    setIsEditingDiagnosis(false);
+  };
+
+  const handleCancelDiagnosis = () => {
+    setDiagnosisData({
+      findings: '',
+      impression: '',
+      severity: 'normal',
+      recommendations: '',
+    });
+    setShowDiagnosisForm(false);
+    setIsEditingDiagnosis(false);
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsUploading(true);
+    const formData = new FormData();
+
+    Array.from(files).forEach((file) => {
+      formData.append('images', file);
     });
 
-    setDiagnosisText('');
-    setShowDiagnosisForm(false);
+    try {
+      await studyService.uploadImages(studyId, formData);
+      // Refresh images
+      queryClient.invalidateQueries({ queryKey: studyKeys.images(studyId) });
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      toast.success(`${files.length} image(s) uploaded successfully!`);
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Failed to upload images. Please try again.');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   if (studyLoading) {
@@ -156,46 +241,155 @@ export default function StudyDetailPage() {
                   <CardTitle>Diagnosis</CardTitle>
                   <CardDescription>Medical findings and diagnosis</CardDescription>
                 </div>
-                {!study.diagnosis && !showDiagnosisForm && (
-                  <Button onClick={() => setShowDiagnosisForm(true)} size="sm">
-                    <FilePlus className="mr-2 h-4 w-4" />
-                    Add Diagnosis
-                  </Button>
+                {!showDiagnosisForm && (
+                  study.diagnosis ? (
+                    <Button onClick={handleEditDiagnosis} size="sm" variant="outline">
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Edit Diagnosis
+                    </Button>
+                  ) : (
+                    <Button onClick={() => setShowDiagnosisForm(true)} size="sm">
+                      <FilePlus className="mr-2 h-4 w-4" />
+                      Add Diagnosis
+                    </Button>
+                  )
                 )}
               </div>
             </CardHeader>
             <CardContent>
-              {study.diagnosis ? (
-                <div className="space-y-2">
-                  <p className="text-sm whitespace-pre-wrap">{study.diagnosis}</p>
-                  {study.diagnosed_at && (
-                    <p className="text-xs text-muted-foreground">
-                      Diagnosed on {new Date(study.diagnosed_at).toLocaleString()}
-                    </p>
+              {study.diagnosis && !showDiagnosisForm ? (
+                <div className="space-y-4">
+                  {/* Severity Badge */}
+                  {study.diagnosis.severity && (
+                    <div>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        study.diagnosis.severity === 'severe' ? 'bg-red-100 text-red-800' :
+                        study.diagnosis.severity === 'moderate' ? 'bg-yellow-100 text-yellow-800' :
+                        study.diagnosis.severity === 'minor' ? 'bg-blue-100 text-blue-800' :
+                        'bg-green-100 text-green-800'
+                      }`}>
+                        {study.diagnosis.severity.charAt(0).toUpperCase() + study.diagnosis.severity.slice(1)}
+                      </span>
+                    </div>
                   )}
+
+                  {/* Findings */}
+                  <div>
+                    <h4 className="font-semibold text-sm mb-1">Findings</h4>
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{study.diagnosis.findings}</p>
+                  </div>
+
+                  {/* Impression */}
+                  {study.diagnosis.impression && (
+                    <div>
+                      <h4 className="font-semibold text-sm mb-1">Impression</h4>
+                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">{study.diagnosis.impression}</p>
+                    </div>
+                  )}
+
+                  {/* Recommendations */}
+                  {study.diagnosis.recommendations && (
+                    <div>
+                      <h4 className="font-semibold text-sm mb-1">Recommendations</h4>
+                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">{study.diagnosis.recommendations}</p>
+                    </div>
+                  )}
+
+                  {/* Footer */}
+                  <div className="pt-2 border-t text-xs text-muted-foreground">
+                    {study.diagnosis.radiologist_name && (
+                      <p>Diagnosed by: {study.diagnosis.radiologist_name}</p>
+                    )}
+                    {study.diagnosis.diagnosed_at && (
+                      <p>Date: {new Date(study.diagnosis.diagnosed_at).toLocaleString()}</p>
+                    )}
+                  </div>
                 </div>
               ) : showDiagnosisForm ? (
                 <div className="space-y-4">
+                  {/* Severity Selection */}
                   <div>
-                    <Label htmlFor="diagnosis">Diagnosis</Label>
+                    <Label htmlFor="severity">Severity Level</Label>
+                    <Select
+                      value={diagnosisData.severity}
+                      onValueChange={(value) => setDiagnosisData({ ...diagnosisData, severity: value })}
+                    >
+                      <SelectTrigger id="severity" className="mt-2">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="normal">Normal - No significant findings</SelectItem>
+                        <SelectItem value="minor">Minor - Minor findings noted</SelectItem>
+                        <SelectItem value="moderate">Moderate - Requires attention</SelectItem>
+                        <SelectItem value="severe">Severe - Urgent attention required</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Findings */}
+                  <div>
+                    <Label htmlFor="findings">Findings *</Label>
                     <Textarea
-                      id="diagnosis"
-                      placeholder="Enter diagnosis findings..."
-                      value={diagnosisText}
-                      onChange={(e) => setDiagnosisText(e.target.value)}
-                      rows={6}
+                      id="findings"
+                      placeholder="Enter detailed radiological findings..."
+                      value={diagnosisData.findings}
+                      onChange={(e) => setDiagnosisData({ ...diagnosisData, findings: e.target.value })}
+                      rows={4}
                       className="mt-2"
                     />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Detailed description of what was observed in the imaging study
+                    </p>
                   </div>
+
+                  {/* Impression */}
+                  <div>
+                    <Label htmlFor="impression">Impression *</Label>
+                    <Textarea
+                      id="impression"
+                      placeholder="Enter clinical impression and conclusion..."
+                      value={diagnosisData.impression}
+                      onChange={(e) => setDiagnosisData({ ...diagnosisData, impression: e.target.value })}
+                      rows={3}
+                      className="mt-2"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Summary, interpretation, and clinical significance
+                    </p>
+                  </div>
+
+                  {/* Recommendations */}
+                  <div>
+                    <Label htmlFor="recommendations">Recommendations (Optional)</Label>
+                    <Textarea
+                      id="recommendations"
+                      placeholder="Enter follow-up recommendations..."
+                      value={diagnosisData.recommendations}
+                      onChange={(e) => setDiagnosisData({ ...diagnosisData, recommendations: e.target.value })}
+                      rows={2}
+                      className="mt-2"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Follow-up procedures, additional tests, or treatment suggestions
+                    </p>
+                  </div>
+
                   <div className="flex gap-2">
                     <Button
-                      onClick={handleAddDiagnosis}
-                      disabled={!diagnosisText.trim() || addDiagnosis.isPending}
+                      onClick={handleSaveDiagnosis}
+                      disabled={
+                        !diagnosisData.findings.trim() ||
+                        !diagnosisData.impression.trim() ||
+                        addDiagnosis.isPending ||
+                        updateDiagnosis.isPending
+                      }
                     >
-                      {addDiagnosis.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Save Diagnosis
+                      {(addDiagnosis.isPending || updateDiagnosis.isPending) && (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      )}
+                      {isEditingDiagnosis ? 'Update Diagnosis' : 'Save Diagnosis'}
                     </Button>
-                    <Button variant="outline" onClick={() => setShowDiagnosisForm(false)}>
+                    <Button variant="outline" onClick={handleCancelDiagnosis}>
                       Cancel
                     </Button>
                   </div>
@@ -211,12 +405,41 @@ export default function StudyDetailPage() {
 
         {/* Images Gallery */}
         <Card>
+          {/* Hidden file input - always present */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept="image/*,.dcm,.dicom"
+            onChange={handleImageUpload}
+            className="hidden"
+          />
+
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileImage className="h-5 w-5" />
-              Medical Images
-              {images && Array.isArray(images) ? <Badge variant="secondary">{images.length} images</Badge> : null}
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <FileImage className="h-5 w-5" />
+                Medical Images
+                {images && Array.isArray(images) && images.length > 0 ? (
+                  <Badge variant="secondary">{images.length} {images.length === 1 ? 'image' : 'images'}</Badge>
+                ) : null}
+              </CardTitle>
+              {images && images.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading}
+                  title="Upload more images"
+                >
+                  {isUploading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Upload className="h-4 w-4" />
+                  )}
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {imagesLoading ? (
@@ -224,29 +447,55 @@ export default function StudyDetailPage() {
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
             ) : images && images.length > 0 ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {images.map((image: any) => (
-                  <div
-                    key={image.id}
-                    className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary transition-all"
-                    onClick={() => setSelectedImage(image)}
-                  >
-                    <Image
-                      src={image.image_url}
-                      alt={`Image ${image.instance_number}`}
-                      fill
-                      className="object-cover"
-                      sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-                    />
-                    <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-2">
-                      Image {image.instance_number}
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {images.map((image: any) => (
+                    <div
+                      key={image.id}
+                      className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                      onClick={() => setSelectedImage(image)}
+                    >
+                      {image.image_url ? (
+                        <Image
+                          src={image.image_url}
+                          alt={`Image ${image.instance_number}`}
+                          fill
+                          className="object-cover"
+                          sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <FileImage className="h-12 w-12 text-muted-foreground" />
+                        </div>
+                      )}
+                      <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-2">
+                        Image {image.instance_number}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             ) : (
               <div className="text-center py-12 text-muted-foreground">
-                No images available for this study
+                <FileImage className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p className="mb-4">No images uploaded yet</p>
+                <Button
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading}
+                >
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Upload First Image
+                    </>
+                  )}
+                </Button>
               </div>
             )}
           </CardContent>

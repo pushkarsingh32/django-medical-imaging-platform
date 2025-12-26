@@ -6,7 +6,7 @@ from rest_framework.decorators import action
 from rest_framework. response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Max
 
 from .models import Hospital, Patient, ImagingStudy, DicomImage, Diagnosis, AuditLog, ContactMessage
 from .serializers import (
@@ -115,7 +115,74 @@ class ImagingStudyViewSet(viewsets.ModelViewSet):
               ),
           }
           return Response(stats)
-      
+
+      @action(detail=True, methods=['post'])
+      def diagnosis(self, request, pk=None):
+          """
+          Custom endpoint: POST /api/studies/{id}/diagnosis/
+          Add a diagnosis to a study
+          """
+          study = self.get_object()
+
+          # Check if diagnosis already exists (OneToOneField)
+          if hasattr(study, 'diagnosis') and study.diagnosis:
+              return Response(
+                  {'error': 'This study already has a diagnosis. Use PUT to update it.'},
+                  status=status.HTTP_400_BAD_REQUEST
+              )
+
+          serializer = DiagnosisSerializer(data=request.data)
+
+          if serializer.is_valid():
+              serializer.save(study=study, radiologist=request.user)
+              return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+          print(f"Diagnosis validation errors: {serializer.errors}")
+          return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+      @action(detail=True, methods=['post'])
+      def upload_images(self, request, pk=None):
+          """
+          Custom endpoint: POST /api/studies/{id}/upload_images/
+          Upload medical images to a study
+          Accepts multiple image files
+          """
+          study = self.get_object()
+          files = request.FILES.getlist('images')
+
+          if not files:
+              return Response(
+                  {'error': 'No images provided'},
+                  status=status.HTTP_400_BAD_REQUEST
+              )
+
+          # Get the highest existing instance_number for this study
+          max_instance_result = study.images.aggregate(Max('instance_number'))
+          max_instance = max_instance_result['instance_number__max'] or 0
+
+          created_images = []
+          for idx, file in enumerate(files, start=max_instance + 1):
+              image_data = {
+                  'study': study.id,
+                  'image_file': file,
+                  'instance_number': idx,
+              }
+              serializer = DicomImageSerializer(data=image_data, context={'request': request})
+              if serializer.is_valid():
+                  image = serializer.save()
+                  # Re-serialize with context to get image_url
+                  output_serializer = DicomImageSerializer(image, context={'request': request})
+                  created_images.append(output_serializer.data)
+              else:
+                  # Log the errors for debugging
+                  print(f"Serializer validation errors: {serializer.errors}")
+                  return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+          return Response({
+              'message': f'{len(created_images)} image(s) uploaded successfully',
+              'images': created_images
+          }, status=status.HTTP_201_CREATED)
+
 
 class DicomImageViewSet(viewsets.ModelViewSet):
       """

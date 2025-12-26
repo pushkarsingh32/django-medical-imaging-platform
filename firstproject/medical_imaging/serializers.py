@@ -32,8 +32,9 @@ class PatientListSerializer(serializers.ModelSerializer):
       class Meta:
           model = Patient
           fields = ['id', 'medical_record_number', 'first_name', 'last_name', 'full_name',
-                    'date_of_birth', 'age', 'gender', 'hospital_name', 'created_at']
-          read_only_fields = ['full_name', 'created_at']
+                    'date_of_birth', 'age', 'gender', 'phone', 'email', 'address',
+                    'hospital', 'hospital_name', 'created_at']
+          read_only_fields = ['full_name', 'created_at', 'age', 'hospital_name']
 
       def get_age(self, obj):
           """Calculate patient age in years"""
@@ -109,7 +110,7 @@ class DiagnosisSerializer(serializers.ModelSerializer):
           model = Diagnosis
           fields = ['id', 'study', 'radiologist', 'radiologist_name', 'findings',
                     'impression', 'severity', 'recommendations', 'diagnosed_at', 'updated_at']
-          read_only_fields = ['diagnosed_at', 'updated_at']
+          read_only_fields = ['diagnosed_at', 'updated_at', 'study', 'radiologist', 'radiologist_name']
 
 
 class ImagingStudyListSerializer(serializers.ModelSerializer):
@@ -124,8 +125,8 @@ class ImagingStudyListSerializer(serializers.ModelSerializer):
       class Meta:
           model = ImagingStudy
           fields = ['id', 'patient', 'patient_name', 'patient_mrn', 'study_date',
-                    'modality', 'body_part', 'status', 'image_count', 'has_diagnosis',
-  'created_at']
+                    'modality', 'body_part', 'status', 'clinical_notes', 'referring_physician',
+                    'image_count', 'has_diagnosis', 'created_at']
           read_only_fields = ['created_at']
 
       def get_image_count(self, obj):

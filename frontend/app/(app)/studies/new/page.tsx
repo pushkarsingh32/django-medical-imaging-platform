@@ -2,14 +2,18 @@
 
 import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { format } from 'date-fns';
 import { usePatients } from '@/lib/hooks/usePatients';
 import { useHospitals } from '@/lib/hooks/useHospitals';
 import { useCreateStudy } from '@/lib/hooks/useStudies';
+import { studyService } from '@/lib/api/services/studyService';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Select,
   SelectContent,
@@ -17,17 +21,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Loader2, Upload, X, ArrowLeft, FileImage } from 'lucide-react';
+import { Loader2, Upload, X, ArrowLeft, FileImage, ChevronDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 const MODALITY_OPTIONS = [
   { value: 'CT', label: 'CT - Computed Tomography' },
-  { value: 'MR', label: 'MRI - Magnetic Resonance Imaging' },
-  { value: 'XR', label: 'X-Ray - Radiography' },
-  { value: 'US', label: 'Ultrasound' },
-  { value: 'MG', label: 'Mammography' },
-  { value: 'PT', label: 'PET - Positron Emission Tomography' },
-  { value: 'NM', label: 'Nuclear Medicine' },
+  { value: 'MRI', label: 'MRI - Magnetic Resonance Imaging' },
+  { value: 'XRAY', label: 'X-Ray - Radiography' },
+  { value: 'ULTRASOUND', label: 'Ultrasound' },
 ];
 
 const BODY_PART_OPTIONS = [
@@ -52,16 +55,16 @@ function NewStudyForm() {
 
   const [formData, setFormData] = useState({
     patient: patientIdParam || '',
-    hospital: '',
     modality: '',
     body_part: '',
-    study_date: new Date().toISOString().split('T')[0],
     status: 'pending',
-    description: '',
+    clinical_notes: '',
   });
 
+  const [studyDate, setStudyDate] = useState<Date>(new Date());
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -81,26 +84,40 @@ function NewStudyForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.patient || !formData.hospital || !formData.modality || !formData.body_part) {
-      alert('Please fill in all required fields');
+    if (!formData.patient || !formData.modality || !formData.body_part) {
+      toast.error('Please fill in all required fields');
       return;
     }
 
-    const submitData = new FormData();
-    Object.entries(formData).forEach(([key, value]) => {
-      submitData.append(key, value);
-    });
-
-    selectedFiles.forEach((file, index) => {
-      submitData.append(`images`, file);
-    });
-
     try {
-      const result = await createStudy.mutateAsync(submitData);
+      // Create study data object (not FormData since we're not uploading files yet)
+      const studyData = {
+        ...formData,
+        study_date: format(studyDate, 'yyyy-MM-dd'),
+      };
+
+      // Create the study first
+      const result = await createStudy.mutateAsync(studyData);
+
+      // If there are images, upload them separately
+      if (selectedFiles.length > 0) {
+        setIsUploadingImages(true);
+        const imageFormData = new FormData();
+        selectedFiles.forEach((file) => {
+          imageFormData.append('images', file);
+        });
+
+        // Upload images to the newly created study
+        await studyService.uploadImages(result.id, imageFormData);
+        setIsUploadingImages(false);
+      }
+
+      toast.success('Study created successfully!');
       router.push(`/studies/${result.id}`);
     } catch (error) {
       console.error('Upload error:', error);
-      alert('Failed to upload study. Please try again.');
+      setIsUploadingImages(false);
+      toast.error('Failed to upload study. Please try again.');
     }
   };
 
@@ -126,43 +143,25 @@ function NewStudyForm() {
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Patient Selection */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="patient">Patient *</Label>
-                  <Select value={formData.patient} onValueChange={(value) => handleInputChange('patient', value)}>
-                    <SelectTrigger id="patient">
-                      <SelectValue placeholder="Select patient" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {patientsData?.results.map((patient) => (
-                        <SelectItem key={patient.id} value={patient.id.toString()}>
-                          {patient.full_name} - {patient.medical_record_number}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="hospital">Hospital *</Label>
-                  <Select value={formData.hospital} onValueChange={(value) => handleInputChange('hospital', value)}>
-                    <SelectTrigger id="hospital">
-                      <SelectValue placeholder="Select hospital" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {hospitals?.results?.map((hospital) => (
-                        <SelectItem key={hospital.id} value={hospital.id.toString()}>
-                          {hospital.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="patient">Patient *</Label>
+                <Select value={formData.patient} onValueChange={(value) => handleInputChange('patient', value)}>
+                  <SelectTrigger id="patient">
+                    <SelectValue placeholder="Select patient" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {patientsData?.results.map((patient) => (
+                      <SelectItem key={patient.id} value={patient.id.toString()}>
+                        {patient.full_name} - {patient.medical_record_number}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Modality and Body Part */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
+                <div className="space-y-2">
                   <Label htmlFor="modality">Modality *</Label>
                   <Select value={formData.modality} onValueChange={(value) => handleInputChange('modality', value)}>
                     <SelectTrigger id="modality">
@@ -178,7 +177,7 @@ function NewStudyForm() {
                   </Select>
                 </div>
 
-                <div>
+                <div className="space-y-2">
                   <Label htmlFor="body_part">Body Part *</Label>
                   <Select value={formData.body_part} onValueChange={(value) => handleInputChange('body_part', value)}>
                     <SelectTrigger id="body_part">
@@ -197,18 +196,41 @@ function NewStudyForm() {
 
               {/* Study Date and Status */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
+                <div className="space-y-2">
                   <Label htmlFor="study_date">Study Date *</Label>
-                  <Input
-                    id="study_date"
-                    type="date"
-                    value={formData.study_date}
-                    onChange={(e) => handleInputChange('study_date', e.target.value)}
-                    required
-                  />
+                  <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        id="study_date"
+                        className={cn(
+                          'w-full justify-between text-left font-normal'
+                        )}
+                      >
+                        {studyDate.toLocaleDateString()}
+                        <ChevronDown className="h-4 w-4 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto overflow-hidden p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={studyDate}
+                        captionLayout="dropdown"
+                        onSelect={(date) => {
+                          if (date) {
+                            setStudyDate(date);
+                            setIsCalendarOpen(false);
+                          }
+                        }}
+                        fromYear={2000}
+                        toYear={new Date().getFullYear()}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
-                <div>
+                <div className="space-y-2">
                   <Label htmlFor="status">Status</Label>
                   <Select value={formData.status} onValueChange={(value) => handleInputChange('status', value)}>
                     <SelectTrigger id="status">
@@ -225,14 +247,14 @@ function NewStudyForm() {
                 </div>
               </div>
 
-              {/* Description */}
-              <div>
-                <Label htmlFor="description">Description (Optional)</Label>
+              {/* Clinical Notes */}
+              <div className="space-y-2">
+                <Label htmlFor="clinical_notes">Clinical Notes (Optional)</Label>
                 <Textarea
-                  id="description"
-                  placeholder="Enter study description or notes..."
-                  value={formData.description}
-                  onChange={(e) => handleInputChange('description', e.target.value)}
+                  id="clinical_notes"
+                  placeholder="Enter clinical notes or reason for study..."
+                  value={formData.clinical_notes}
+                  onChange={(e) => handleInputChange('clinical_notes', e.target.value)}
                   rows={4}
                 />
               </div>
@@ -302,13 +324,10 @@ function NewStudyForm() {
           </Card>
 
           {/* Actions */}
-          <div className="flex gap-4 mt-6">
-            <Button type="submit" size="lg" disabled={createStudy.isPending}>
-              {createStudy.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Upload Study
-            </Button>
-            <Button type="button" variant="outline" size="lg" onClick={() => router.back()}>
-              Cancel
+          <div className="mt-6">
+            <Button type="submit" size="lg" disabled={createStudy.isPending || isUploadingImages}>
+              {(createStudy.isPending || isUploadingImages) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isUploadingImages ? `Uploading ${selectedFiles.length} image(s)...` : 'Create Study'}
             </Button>
           </div>
         </form>

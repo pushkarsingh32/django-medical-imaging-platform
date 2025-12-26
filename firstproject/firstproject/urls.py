@@ -23,11 +23,14 @@ from django.conf.urls.static import static
 urlpatterns = [
     path('admin/', admin.site.urls),
 
-    # Django-allauth headless API endpoints
-    path('_allauth/', include('allauth.headless.urls')),
+    # API endpoints
+    path('api/', include([
+        # Django-allauth headless API endpoints
+        path('_allauth/', include('allauth.headless.urls')),
 
-    # Your app URLs
-    path('api/', include('medical_imaging.urls')),
+        # Medical imaging app URLs
+        path('', include('medical_imaging.urls')),
+    ])),
 ]
 
 if settings.DEBUG: 

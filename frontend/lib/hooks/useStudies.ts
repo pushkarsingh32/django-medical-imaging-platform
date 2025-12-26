@@ -86,3 +86,19 @@ export function useAddDiagnosis(studyId: number) {
     },
   });
 }
+
+/**
+ * Hook to update existing diagnosis
+ */
+export function useUpdateDiagnosis(studyId: number) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ diagnosisId, data }: { diagnosisId: number; data: any }) =>
+      studyService.updateDiagnosis(diagnosisId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: studyKeys.detail(studyId) });
+      queryClient.invalidateQueries({ queryKey: studyKeys.diagnosis(studyId) });
+    },
+  });
+}

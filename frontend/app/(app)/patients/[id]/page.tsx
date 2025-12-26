@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, ArrowLeft, User, Phone, Mail, MapPin, Calendar, Building2 } from 'lucide-react';
+import { Loader2, ArrowLeft, User, Phone, Mail, MapPin, Calendar, Building2, Pencil } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -50,14 +50,20 @@ export default function PatientDetailPage() {
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="icon" onClick={() => router.back()}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">{patient.full_name}</h1>
-            <p className="text-muted-foreground">MRN: {patient.medical_record_number}</p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button variant="outline" size="icon" onClick={() => router.back()}>
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">{patient.full_name}</h1>
+              <p className="text-muted-foreground">MRN: {patient.medical_record_number}</p>
+            </div>
           </div>
+          <Button onClick={() => router.push(`/patients/${patientId}/edit`)}>
+            <Pencil className="mr-2 h-4 w-4" />
+            Edit Patient
+          </Button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

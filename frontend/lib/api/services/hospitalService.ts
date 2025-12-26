@@ -3,10 +3,10 @@ import { Hospital, PaginatedResponse } from '../types';
 
 export const hospitalService = {
   /**
-   * Get all hospitals
+   * Get all hospitals with optional search filter
    */
-  getAll: (): Promise<PaginatedResponse<Hospital>> => {
-    return apiClient.get('/hospitals/');
+  getAll: (params?: { search?: string }): Promise<Hospital[] | PaginatedResponse<Hospital>> => {
+    return apiClient.get('/hospitals/', params);
   },
 
   /**
@@ -14,5 +14,26 @@ export const hospitalService = {
    */
   getById: (id: number): Promise<Hospital> => {
     return apiClient.get(`/hospitals/${id}/`);
+  },
+
+  /**
+   * Create new hospital
+   */
+  create: (data: any): Promise<Hospital> => {
+    return apiClient.post('/hospitals/', data);
+  },
+
+  /**
+   * Update existing hospital
+   */
+  update: (id: number, data: any): Promise<Hospital> => {
+    return apiClient.patch(`/hospitals/${id}/`, data);
+  },
+
+  /**
+   * Delete hospital
+   */
+  delete: (id: number): Promise<void> => {
+    return apiClient.delete(`/hospitals/${id}/`);
   },
 };

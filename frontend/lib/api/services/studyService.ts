@@ -25,8 +25,10 @@ export const studyService = {
   /**
    * Get images for a study
    */
-  getImages: (id: number): Promise<any[]> => {
-    return apiClient.get(`/images/`, { study: id });
+  getImages: async (id: number): Promise<any[]> => {
+    const response: any = await apiClient.get(`/images/`, { study: id });
+    // Handle both paginated and array responses
+    return Array.isArray(response) ? response : (response.results || []);
   },
 
   /**
@@ -51,6 +53,13 @@ export const studyService = {
   },
 
   /**
+   * Update existing diagnosis
+   */
+  updateDiagnosis: (diagnosisId: number, data: any) => {
+    return apiClient.patch(`/diagnoses/${diagnosisId}/`, data);
+  },
+
+  /**
    * Get pending studies
    */
   getPending: (): Promise<ImagingStudy[]> => {
@@ -62,5 +71,12 @@ export const studyService = {
    */
   getStatistics: (): Promise<StudyStatistics> => {
     return apiClient.get('/studies/statistics/');
+  },
+
+  /**
+   * Upload images to a study
+   */
+  uploadImages: (studyId: number, formData: FormData) => {
+    return apiClient.post(`/studies/${studyId}/upload_images/`, formData);
   },
 };
