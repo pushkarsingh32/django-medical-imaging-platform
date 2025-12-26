@@ -7,7 +7,11 @@ from .views import (
     DicomImageViewSet,
     DiagnosisViewSet,
     AuditLogViewSet,
-    ContactMessageViewSet
+    ContactMessageViewSet,
+    dashboard_stats,
+    study_trends,
+    modality_distribution,
+    recent_activity,
 )
 
 
@@ -22,5 +26,10 @@ router.register(r'contact', ContactMessageViewSet, basename='contact')
 
 
 urlpatterns = [
-    path('', include(router.urls))
+    path('', include(router.urls)),
+    # Stats endpoints
+    path('stats/', dashboard_stats, name='dashboard-stats'),
+    path('stats/trends/', study_trends, name='study-trends'),
+    path('stats/modality-distribution/', modality_distribution, name='modality-distribution'),
+    path('stats/recent-activity/', recent_activity, name='recent-activity'),
 ]

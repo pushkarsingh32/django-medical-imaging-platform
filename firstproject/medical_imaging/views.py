@@ -200,3 +200,90 @@ class ContactMessageViewSet(viewsets.ModelViewSet):
             },
             status=status.HTTP_201_CREATED
         )
+
+
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from datetime import timedelta
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def dashboard_stats(request):
+    """Get dashboard statistics"""
+    from datetime import date
+    today = date.today()
+    first_day_of_month = today.replace(day=1)
+    week_ago = today - timedelta(days=7)
+
+    stats = {
+        'total_patients': Patient.objects.count(),
+        'total_studies': ImagingStudy.objects.count(),
+        'total_images': DicomImage.objects.count(),
+        'total_hospitals': Hospital.objects.count(),
+        'new_patients_this_month': Patient.objects.filter(created_at__gte=first_day_of_month).count(),
+        'studies_this_week': ImagingStudy.objects.filter(created_at__gte=week_ago).count(),
+    }
+    return Response(stats)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def study_trends(request):
+    """Get study trends over time"""
+    days = int(request.GET.get('days', 30))
+    from datetime import date
+    today = date.today()
+    start_date = today - timedelta(days=days)
+
+    # Group studies by date
+    trends = []
+    for i in range(days):
+        current_date = start_date + timedelta(days=i)
+        count = ImagingStudy.objects.filter(
+            study_date__date=current_date
+        ).count()
+        trends.append({
+            'date': current_date.strftime('%Y-%m-%d'),
+            'count': count
+        })
+
+    return Response(trends)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def modality_distribution(request):
+    """Get distribution of studies by modality"""
+    from django.db.models import Count
+
+    distribution = ImagingStudy.objects.values('modality').annotate(
+        count=Count('id')
+    ).order_by('-count')
+
+    return Response(list(distribution))
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def recent_activity(request):
+    """Get recent study activity"""
+    limit = int(request.GET.get('limit', 10))
+
+    recent_studies = ImagingStudy.objects.select_related(
+        'patient', 'patient__hospital'
+    ).order_by('-created_at')[:limit]
+
+    activity = []
+    for study in recent_studies:
+        activity.append({
+            'id': study.id,
+            'modality': study.modality,
+            'body_part': study.body_part,
+            'patient_name': study.patient.full_name,
+            'hospital_name': study.patient.hospital.name,
+            'status': study.status,
+            'study_date': study.study_date.isoformat(),
+        })
+
+    return Response(activity)
