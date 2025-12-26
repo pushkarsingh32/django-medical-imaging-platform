@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Loader2, Users, Building2, Activity, FileImage, TrendingUp, Calendar } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
@@ -16,14 +17,6 @@ export default function DashboardPage() {
   const { data: modality, isLoading: modalityLoading } = useModalityDistribution();
   const { data: trends, isLoading: trendsLoading } = useStudyTrends({ days: 30 });
   const { data: activity, isLoading: activityLoading } = useRecentActivity(10);
-
-  if (statsLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
@@ -44,10 +37,19 @@ export default function DashboardPage() {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats?.total_patients || 0}</div>
-              <p className="text-xs text-muted-foreground">
-                {stats?.new_patients_this_month || 0} new this month
-              </p>
+              {statsLoading ? (
+                <>
+                  <Skeleton className="h-8 w-20 mb-2" />
+                  <Skeleton className="h-4 w-32" />
+                </>
+              ) : (
+                <>
+                  <div className="text-2xl font-bold">{stats?.total_patients || 0}</div>
+                  <p className="text-xs text-muted-foreground">
+                    {stats?.new_patients_this_month || 0} new this month
+                  </p>
+                </>
+              )}
             </CardContent>
           </Card>
 
@@ -57,10 +59,19 @@ export default function DashboardPage() {
               <Activity className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats?.total_studies || 0}</div>
-              <p className="text-xs text-muted-foreground">
-                {stats?.studies_this_week || 0} this week
-              </p>
+              {statsLoading ? (
+                <>
+                  <Skeleton className="h-8 w-20 mb-2" />
+                  <Skeleton className="h-4 w-32" />
+                </>
+              ) : (
+                <>
+                  <div className="text-2xl font-bold">{stats?.total_studies || 0}</div>
+                  <p className="text-xs text-muted-foreground">
+                    {stats?.studies_this_week || 0} this week
+                  </p>
+                </>
+              )}
             </CardContent>
           </Card>
 
@@ -70,10 +81,19 @@ export default function DashboardPage() {
               <FileImage className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats?.total_images || 0}</div>
-              <p className="text-xs text-muted-foreground">
-                Across all studies
-              </p>
+              {statsLoading ? (
+                <>
+                  <Skeleton className="h-8 w-20 mb-2" />
+                  <Skeleton className="h-4 w-32" />
+                </>
+              ) : (
+                <>
+                  <div className="text-2xl font-bold">{stats?.total_images || 0}</div>
+                  <p className="text-xs text-muted-foreground">
+                    Across all studies
+                  </p>
+                </>
+              )}
             </CardContent>
           </Card>
 
@@ -83,10 +103,19 @@ export default function DashboardPage() {
               <Building2 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats?.total_hospitals || 0}</div>
-              <p className="text-xs text-muted-foreground">
-                Active facilities
-              </p>
+              {statsLoading ? (
+                <>
+                  <Skeleton className="h-8 w-20 mb-2" />
+                  <Skeleton className="h-4 w-32" />
+                </>
+              ) : (
+                <>
+                  <div className="text-2xl font-bold">{stats?.total_hospitals || 0}</div>
+                  <p className="text-xs text-muted-foreground">
+                    Active facilities
+                  </p>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>
