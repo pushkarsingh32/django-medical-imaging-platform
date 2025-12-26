@@ -6,17 +6,29 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Mail, Phone, MapPin, Clock, Send } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Mail, Phone, MapPin, Clock, Send, CheckCircle2, XCircle } from 'lucide-react';
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    phone: '',
     subject: '',
     message: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogContent, setDialogContent] = useState<{
+    type: 'success' | 'error';
+    title: string;
+    message: string;
+  } | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,12 +38,22 @@ export default function ContactPage() {
       const { contactService } = await import('@/lib/api');
       const response = await contactService.submitContact(formData);
 
-      alert(response.message || 'Thank you for contacting us! We will get back to you soon.');
-      setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
+      setDialogContent({
+        type: 'success',
+        title: 'Message Sent!',
+        message: response.message || 'Thank you for contacting us! We will get back to you soon.',
+      });
+      setDialogOpen(true);
+      setFormData({ name: '', email: '', subject: '', message: '' });
     } catch (error: any) {
       console.error('Contact form error:', error);
       const errorMessage = error.response?.data?.message || 'Failed to send message. Please try again.';
-      alert(errorMessage);
+      setDialogContent({
+        type: 'error',
+        title: 'Error',
+        message: errorMessage,
+      });
+      setDialogOpen(true);
     } finally {
       setIsSubmitting(false);
     }
@@ -142,30 +164,17 @@ export default function ContactPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="phone">Phone Number</Label>
-                      <Input
-                        id="phone"
-                        type="tel"
-                        placeholder="+1 (555) 123-4567"
-                        value={formData.phone}
-                        onChange={(e) => handleChange('phone', e.target.value)}
-                        className="mt-2"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="subject">Subject *</Label>
-                      <Input
-                        id="subject"
-                        type="text"
-                        placeholder="How can we help?"
-                        value={formData.subject}
-                        onChange={(e) => handleChange('subject', e.target.value)}
-                        required
-                        className="mt-2"
-                      />
-                    </div>
+                  <div>
+                    <Label htmlFor="subject">Subject *</Label>
+                    <Input
+                      id="subject"
+                      type="text"
+                      placeholder="How can we help?"
+                      value={formData.subject}
+                      onChange={(e) => handleChange('subject', e.target.value)}
+                      required
+                      className="mt-2"
+                    />
                   </div>
 
                   <div>
@@ -275,6 +284,23 @@ export default function ContactPage() {
           </div>
         </div>
       </section>
+
+      {/* Success/Error Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              {dialogContent?.type === 'success' ? (
+                <CheckCircle2 className="h-6 w-6 text-green-600" />
+              ) : (
+                <XCircle className="h-6 w-6 text-red-600" />
+              )}
+              <DialogTitle>{dialogContent?.title}</DialogTitle>
+            </div>
+            <DialogDescription>{dialogContent?.message}</DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
