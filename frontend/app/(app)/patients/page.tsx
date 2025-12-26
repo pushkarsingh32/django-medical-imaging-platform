@@ -30,7 +30,11 @@ export default function PatientsPage() {
   const [gender, setGender] = useState<string>('');
   const [page, setPage] = useState(1);
 
-  const { data, isLoading, error } = usePatients({ search, gender, page });
+  const { data, isLoading, error } = usePatients({
+    search,
+    gender: gender === 'all' ? undefined : gender,
+    page
+  });
 
   const handleRowClick = (patientId: number) => {
     router.push(`/patients/${patientId}`);
@@ -91,7 +95,7 @@ export default function PatientsPage() {
                   <SelectValue placeholder="All Genders" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Genders</SelectItem>
+                  <SelectItem value="all">All Genders</SelectItem>
                   <SelectItem value="M">Male</SelectItem>
                   <SelectItem value="F">Female</SelectItem>
                   <SelectItem value="O">Other</SelectItem>
@@ -99,12 +103,12 @@ export default function PatientsPage() {
               </Select>
 
               {/* Clear Filters */}
-              {(search || gender) && (
+              {(search || (gender && gender !== 'all')) && (
                 <Button
                   variant="outline"
                   onClick={() => {
                     setSearch('');
-                    setGender('');
+                    setGender('all');
                     setPage(1);
                   }}
                 >
