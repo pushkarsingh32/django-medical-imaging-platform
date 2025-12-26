@@ -235,7 +235,7 @@ AUTHENTICATION_BACKENDS = [
 # Allauth settings (updated to new format)
 ACCOUNT_LOGIN_METHODS = {'email'}  # Use email for login
 ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*']  # Only one password required
-ACCOUNT_EMAIL_VERIFICATION = 'optional'  # Change to 'mandatory' for production
+ACCOUNT_EMAIL_VERIFICATION = 'none'  # Disabled for development, change to 'mandatory' for production
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None  # No username field
 
 # Headless mode configuration
