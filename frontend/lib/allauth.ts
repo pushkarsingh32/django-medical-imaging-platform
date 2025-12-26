@@ -43,6 +43,14 @@ class StorageHelper {
 class HttpClient {
   constructor(private getToken: () => string | null) {}
 
+  private getCsrfToken(): string | null {
+    if (typeof document === 'undefined') return null;
+    const cookie = document.cookie
+      .split('; ')
+      .find(row => row.startsWith('csrftoken='));
+    return cookie ? cookie.split('=')[1] : null;
+  }
+
   async request<T>(endpoint: string, method: string = 'GET', body?: any): Promise<AuthResponse<T>> {
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
@@ -51,6 +59,14 @@ class HttpClient {
     const token = this.getToken();
     if (token) {
       headers['X-Session-Token'] = token;
+    }
+
+    // Add CSRF token for non-GET requests
+    if (method !== 'GET') {
+      const csrfToken = this.getCsrfToken();
+      if (csrfToken) {
+        headers['X-CSRFToken'] = csrfToken;
+      }
     }
 
     const response = await fetch(`${API_BASE}${API_PREFIX}${endpoint}`, {
