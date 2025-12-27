@@ -452,4 +452,7 @@ class PatientReport(models.Model):
     @property
     def file_size_mb(self):
         """Get file size in MB"""
-        return round(self.file_size / (1024 * 1024), 2)
+        size_mb = self.file_size / (1024 * 1024)
+        if size_mb < 0.01:  # Less than 0.01 MB, show in KB
+            return f"{round(self.file_size / 1024, 1)} KB"
+        return f"{round(size_mb, 2)} MB"

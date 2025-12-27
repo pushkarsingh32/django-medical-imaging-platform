@@ -238,10 +238,17 @@ class PatientReportSerializer(serializers.ModelSerializer):
     Serializer for PatientReport model
     Tracks generated PDF reports
     """
-    generated_by_name = serializers.CharField(source='generated_by.get_full_name', read_only=True)
+    generated_by_name = serializers.SerializerMethodField()
     patient_name = serializers.CharField(source='patient.full_name', read_only=True)
     file_url = serializers.ReadOnlyField()
     file_size_mb = serializers.ReadOnlyField()
+
+    def get_generated_by_name(self, obj):
+        """Get user's full name or fallback to username"""
+        if not obj.generated_by:
+            return 'System'
+        full_name = obj.generated_by.get_full_name()
+        return full_name if full_name else obj.generated_by.username
 
     class Meta:
         model = PatientReport
