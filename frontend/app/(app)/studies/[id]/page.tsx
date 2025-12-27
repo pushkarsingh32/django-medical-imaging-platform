@@ -113,7 +113,8 @@ export default function StudyDetailPage() {
       const response = await studyService.uploadImages(studyId, formData);
       setUploadTaskId(response.task_id);
 
-      toast.info(`Processing ${response.total_files} image(s) in background...`);
+      const imageText = response.total_files === 1 ? 'image' : 'images';
+      toast.info(`Processing ${response.total_files} ${imageText}...`);
 
       // Poll for task status
       const pollInterval = setInterval(async () => {
@@ -138,14 +139,18 @@ export default function StudyDetailPage() {
             // Show result
             if (taskStatus.result) {
               const { created, skipped, errors } = taskStatus.result;
+              const createdText = created === 1 ? 'image' : 'images';
+              const skippedText = skipped === 1 ? 'image' : 'images';
+              const errorText = errors === 1 ? 'image' : 'images';
+
               if (created > 0 && skipped > 0) {
-                toast.success(`${created} image(s) uploaded, ${skipped} skipped (duplicates)`);
+                toast.success(`${created} ${createdText} uploaded, ${skipped} ${skippedText} skipped (duplicates)`);
               } else if (created > 0) {
-                toast.success(`${created} image(s) uploaded successfully!`);
+                toast.success(`${created} ${createdText} uploaded successfully!`);
               } else if (skipped > 0) {
-                toast.warning(`All ${skipped} image(s) skipped (duplicates already exist)`);
+                toast.warning(`${skipped === 1 ? 'Image' : 'All ' + skipped + ' images'} already ${skipped === 1 ? 'exists' : 'exist'}`);
               } else if (errors > 0) {
-                toast.error(`${errors} image(s) failed to process`);
+                toast.error(`${errors} ${errorText} failed to upload`);
               }
             } else {
               toast.success('Upload completed!');
@@ -155,7 +160,7 @@ export default function StudyDetailPage() {
             setIsUploading(false);
             setUploadTaskId(null);
             setUploadProgress(0);
-            toast.error(taskStatus.error_message || 'Failed to process images. Please try again.');
+            toast.error(taskStatus.error_message || 'Something went wrong. Please try again.');
           }
         } catch (pollError) {
           console.error('Poll error:', pollError);
@@ -175,7 +180,7 @@ export default function StudyDetailPage() {
 
     } catch (error) {
       console.error('Upload error:', error);
-      toast.error('Failed to upload images. Please try again.');
+      toast.error('Failed to upload. Please try again.');
       setIsUploading(false);
       setUploadProgress(0);
       setUploadTaskId(null);
