@@ -6,6 +6,7 @@ import {
   PaginatedResponse,
   PatientQueryParams,
   UploadResponse,
+  PatientReport,
 } from '../types';
 
 export const patientService = {
@@ -63,5 +64,12 @@ export const patientService = {
    */
   generateReport: (id: number): Promise<UploadResponse> => {
     return apiClient.post(`/patients/${id}/generate_report/`, {});
+  },
+
+  /**
+   * Get all PDF reports for a patient
+   */
+  getReports: (id: number): Promise<PatientReport[]> => {
+    return apiClient.get(`/patients/${id}/reports/`);
   },
 };

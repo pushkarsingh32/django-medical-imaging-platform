@@ -203,8 +203,25 @@ export interface TaskStatus {
     created: number;
     skipped: number;
     errors: number;
+    report_id?: number;
   } | null;
   error_message: string;
   study: number;
   user: number | null;
+}
+
+export interface PatientReport {
+  id: number;
+  patient: number;
+  patient_name: string;
+  generated_by: number | null;
+  generated_by_name: string;
+  pdf_file: string;
+  file_url: string;
+  file_size: number;
+  file_size_mb: number;
+  filename: string;
+  studies_count: number;
+  generated_at: string;
+  task_id: string;
 }

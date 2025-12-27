@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { usePatient } from '@/lib/hooks/usePatients';
 import { useRouter, useParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, ArrowLeft, User, Phone, Mail, MapPin, Calendar, Building2, Pencil, FileText, Download } from 'lucide-react';
+import { Loader2, ArrowLeft, User, Phone, Mail, MapPin, Calendar, Building2, Pencil, FileText, Download, Eye } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/table';
 import { patientService, studyService } from '@/lib/api';
 import { toast } from 'sonner';
+import type { PatientReport } from '@/lib/api/types';
 
 export default function PatientDetailPage() {
   const router = useRouter();
@@ -26,6 +27,26 @@ export default function PatientDetailPage() {
   const { data: patient, isLoading, error } = usePatient(patientId);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [pdfProgress, setPdfProgress] = useState(0);
+  const [reports, setReports] = useState<PatientReport[]>([]);
+  const [loadingReports, setLoadingReports] = useState(false);
+
+  // Fetch reports on mount
+  useEffect(() => {
+    const fetchReports = async () => {
+      if (!patientId) return;
+      setLoadingReports(true);
+      try {
+        const data = await patientService.getReports(patientId);
+        setReports(data);
+      } catch (err) {
+        console.error('Failed to fetch reports:', err);
+      } finally {
+        setLoadingReports(false);
+      }
+    };
+
+    fetchReports();
+  }, [patientId]);
 
   const handleGeneratePDF = async () => {
     setIsGeneratingPDF(true);
@@ -48,23 +69,11 @@ export default function PatientDetailPage() {
             setIsGeneratingPDF(false);
             setPdfProgress(0);
 
-            // Download PDF
-            if (taskStatus.result && taskStatus.result.pdf_url) {
-              const pdfUrl = taskStatus.result.pdf_url;
-              const filename = taskStatus.result.filename || 'patient_report.pdf';
+            // Refresh reports list
+            const data = await patientService.getReports(patientId);
+            setReports(data);
 
-              // Create temporary link and trigger download
-              const link = document.createElement('a');
-              link.href = pdfUrl;
-              link.download = filename;
-              document.body.appendChild(link);
-              link.click();
-              document.body.removeChild(link);
-
-              toast.success('PDF report downloaded successfully!');
-            } else {
-              toast.success('PDF report generated!');
-            }
+            toast.success('PDF report generated successfully!');
           } else if (taskStatus.status === 'failed') {
             clearInterval(pollInterval);
             setIsGeneratingPDF(false);
@@ -121,33 +130,14 @@ export default function PatientDetailPage() {
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="outline" size="icon" onClick={() => router.back()}>
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">{patient.full_name}</h1>
-              <p className="text-muted-foreground">MRN: {patient.medical_record_number}</p>
-            </div>
-          </div>
-          <Button
-            onClick={handleGeneratePDF}
-            disabled={isGeneratingPDF}
-            className="gap-2"
-          >
-            {isGeneratingPDF ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Generating... {pdfProgress}%
-              </>
-            ) : (
-              <>
-                <FileText className="h-4 w-4" />
-                Generate Report
-              </>
-            )}
+        <div className="flex items-center gap-4">
+          <Button variant="outline" size="icon" onClick={() => router.back()}>
+            <ArrowLeft className="h-4 w-4" />
           </Button>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">{patient.full_name}</h1>
+            <p className="text-muted-foreground">MRN: {patient.medical_record_number}</p>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -289,6 +279,120 @@ export default function PatientDetailPage() {
               ) : (
                 <div className="text-center py-12 text-muted-foreground">
                   No imaging studies found
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Generated Reports Section */}
+          <Card className="lg:col-span-3">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    Generated Reports
+                    {reports.length > 0 && (
+                      <Badge variant="secondary">{reports.length} {reports.length === 1 ? 'report' : 'reports'}</Badge>
+                    )}
+                  </CardTitle>
+                  <CardDescription>PDF reports generated for this patient</CardDescription>
+                </div>
+                <Button
+                  onClick={handleGeneratePDF}
+                  disabled={isGeneratingPDF}
+                  className="gap-2"
+                >
+                  {isGeneratingPDF ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Generating... {pdfProgress}%
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="h-4 w-4" />
+                      Generate Report
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {loadingReports ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : reports.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Filename</TableHead>
+                      <TableHead>Generated</TableHead>
+                      <TableHead>Studies</TableHead>
+                      <TableHead>Size</TableHead>
+                      <TableHead>Generated By</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {reports.map((report) => (
+                      <TableRow key={report.id}>
+                        <TableCell className="font-medium">{report.filename}</TableCell>
+                        <TableCell>{new Date(report.generated_at).toLocaleString()}</TableCell>
+                        <TableCell>{report.studies_count}</TableCell>
+                        <TableCell>{report.file_size_mb} MB</TableCell>
+                        <TableCell>{report.generated_by_name || 'System'}</TableCell>
+                        <TableCell className="text-right space-x-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => window.open(report.file_url, '_blank')}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            View
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={async () => {
+                              try {
+                                // Fetch the PDF as a blob
+                                const response = await fetch(report.file_url);
+                                const blob = await response.blob();
+
+                                // Create a blob URL
+                                const blobUrl = window.URL.createObjectURL(blob);
+
+                                // Create temporary link and trigger download
+                                const link = document.createElement('a');
+                                link.href = blobUrl;
+                                link.download = report.filename;
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+
+                                // Cleanup blob URL
+                                window.URL.revokeObjectURL(blobUrl);
+
+                                toast.success('Download started!');
+                              } catch (error) {
+                                console.error('Download error:', error);
+                                toast.error('Failed to download PDF');
+                              }
+                            }}
+                          >
+                            <Download className="h-4 w-4 mr-1" />
+                            Download
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center py-12 text-muted-foreground">
+                  <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No reports generated yet</p>
+                  <p className="text-sm mt-2">Click "Generate Report" to create the first PDF report</p>
                 </div>
               )}
             </CardContent>
