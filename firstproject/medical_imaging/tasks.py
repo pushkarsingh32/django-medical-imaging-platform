@@ -243,10 +243,14 @@ def generate_patient_report_async(self, patient_id, user_id=None):
 
         logger.info(f"PDF generated successfully, size: {len(pdf_bytes)} bytes")
 
-        # Save PDF to storage
-        filename = f"patient_reports/patient_{patient.medical_record_number}_{task_id[:8]}.pdf"
+        # Save PDF to storage with timestamp
+        from datetime import datetime
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M')
+        display_filename = f"{patient.medical_record_number}_{timestamp}.pdf"
+        storage_path = f"patient_reports/{display_filename}"
+
         pdf_file = ContentFile(pdf_bytes)
-        saved_path = default_storage.save(filename, pdf_file)
+        saved_path = default_storage.save(storage_path, pdf_file)
 
         # Get URL
         pdf_url = default_storage.url(saved_path)
@@ -262,7 +266,7 @@ def generate_patient_report_async(self, patient_id, user_id=None):
             generated_by_id=user_id,
             pdf_file=saved_path,
             file_size=len(pdf_bytes),
-            filename=f"patient_{patient.medical_record_number}_report.pdf",
+            filename=display_filename,
             studies_count=studies_count,
             task_id=task_id,
         )
@@ -274,7 +278,7 @@ def generate_patient_report_async(self, patient_id, user_id=None):
         task_status.status = 'completed'
         task_status.result = {
             'pdf_url': pdf_url,
-            'filename': f"patient_{patient.medical_record_number}_report.pdf",
+            'filename': display_filename,
             'file_size': len(pdf_bytes),
             'report_id': report.id,
         }
@@ -282,7 +286,7 @@ def generate_patient_report_async(self, patient_id, user_id=None):
 
         return {
             'pdf_url': pdf_url,
-            'filename': f"patient_{patient.medical_record_number}_report.pdf",
+            'filename': display_filename,
             'report_id': report.id,
             'task_id': task_id,
         }
