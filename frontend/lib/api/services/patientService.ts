@@ -5,6 +5,7 @@ import {
   CreatePatientData,
   PaginatedResponse,
   PatientQueryParams,
+  UploadResponse,
 } from '../types';
 
 export const patientService = {
@@ -55,5 +56,12 @@ export const patientService = {
    */
   getStudies: (id: number) => {
     return apiClient.get(`/patients/${id}/studies/`);
+  },
+
+  /**
+   * Generate PDF report for patient (async with Celery)
+   */
+  generateReport: (id: number): Promise<UploadResponse> => {
+    return apiClient.post(`/patients/${id}/generate_report/`, {});
   },
 };

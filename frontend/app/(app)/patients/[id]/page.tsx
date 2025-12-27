@@ -1,11 +1,12 @@
 'use client';
 
+import { useState } from 'react';
 import { usePatient } from '@/lib/hooks/usePatients';
 import { useRouter, useParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, ArrowLeft, User, Phone, Mail, MapPin, Calendar, Building2, Pencil } from 'lucide-react';
+import { Loader2, ArrowLeft, User, Phone, Mail, MapPin, Calendar, Building2, Pencil, FileText, Download } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -14,6 +15,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { patientService, studyService } from '@/lib/api';
+import { toast } from 'sonner';
 
 export default function PatientDetailPage() {
   const router = useRouter();
@@ -21,6 +24,74 @@ export default function PatientDetailPage() {
   const patientId = Number(params.id);
 
   const { data: patient, isLoading, error } = usePatient(patientId);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [pdfProgress, setPdfProgress] = useState(0);
+
+  const handleGeneratePDF = async () => {
+    setIsGeneratingPDF(true);
+    setPdfProgress(0);
+
+    try {
+      // Trigger PDF generation
+      const response = await patientService.generateReport(patientId);
+
+      toast.info('Generating PDF report...');
+
+      // Poll for task status
+      const pollInterval = setInterval(async () => {
+        try {
+          const taskStatus = await studyService.getTaskStatus(response.task_id);
+          setPdfProgress(taskStatus.progress_percentage);
+
+          if (taskStatus.status === 'completed') {
+            clearInterval(pollInterval);
+            setIsGeneratingPDF(false);
+            setPdfProgress(0);
+
+            // Download PDF
+            if (taskStatus.result && taskStatus.result.pdf_url) {
+              const pdfUrl = taskStatus.result.pdf_url;
+              const filename = taskStatus.result.filename || 'patient_report.pdf';
+
+              // Create temporary link and trigger download
+              const link = document.createElement('a');
+              link.href = pdfUrl;
+              link.download = filename;
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+
+              toast.success('PDF report downloaded successfully!');
+            } else {
+              toast.success('PDF report generated!');
+            }
+          } else if (taskStatus.status === 'failed') {
+            clearInterval(pollInterval);
+            setIsGeneratingPDF(false);
+            setPdfProgress(0);
+            toast.error(taskStatus.error_message || 'Failed to generate PDF. Please try again.');
+          }
+        } catch (pollError) {
+          console.error('Poll error:', pollError);
+        }
+      }, 2000); // Poll every 2 seconds
+
+      // Timeout after 2 minutes
+      setTimeout(() => {
+        clearInterval(pollInterval);
+        if (isGeneratingPDF) {
+          setIsGeneratingPDF(false);
+          toast.error('PDF generation timeout. Please try again.');
+        }
+      }, 2 * 60 * 1000);
+
+    } catch (error) {
+      console.error('PDF generation error:', error);
+      toast.error('Failed to generate PDF. Please try again.');
+      setIsGeneratingPDF(false);
+      setPdfProgress(0);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -50,14 +121,33 @@ export default function PatientDetailPage() {
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="icon" onClick={() => router.back()}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">{patient.full_name}</h1>
-            <p className="text-muted-foreground">MRN: {patient.medical_record_number}</p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button variant="outline" size="icon" onClick={() => router.back()}>
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">{patient.full_name}</h1>
+              <p className="text-muted-foreground">MRN: {patient.medical_record_number}</p>
+            </div>
           </div>
+          <Button
+            onClick={handleGeneratePDF}
+            disabled={isGeneratingPDF}
+            className="gap-2"
+          >
+            {isGeneratingPDF ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Generating... {pdfProgress}%
+              </>
+            ) : (
+              <>
+                <FileText className="h-4 w-4" />
+                Generate Report
+              </>
+            )}
+          </Button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
