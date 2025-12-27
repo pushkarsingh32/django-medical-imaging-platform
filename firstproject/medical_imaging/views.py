@@ -20,7 +20,8 @@ from .serializers import (
     DicomImageSerializer,
     DiagnosisSerializer,
     AuditLogSerializer,
-    ContactMessageSerializer
+    ContactMessageSerializer,
+    TaskStatusSerializer
 )
 
 
@@ -336,14 +337,11 @@ class ImagingStudyViewSet(viewsets.ModelViewSet):
       def upload_images(self, request, pk=None):
           """
           Custom endpoint: POST /api/studies/{id}/upload_images/
-          Upload medical images to a study
+          Upload medical images to a study - processes asynchronously with Celery
           Accepts multiple image files (DICOM or regular images)
-          Automatically parses DICOM metadata if file is DICOM format
+          Returns task_id for progress tracking
           """
-          from .dicom_service import DicomParsingService
-          from .image_cache_service import ImageCacheService
-          import tempfile
-          import os
+          from .tasks import process_dicom_images_async
 
           study = self.get_object()
           files = request.FILES.getlist('images')
@@ -358,115 +356,29 @@ class ImagingStudyViewSet(viewsets.ModelViewSet):
           max_instance_result = study.images.aggregate(Max('instance_number'))
           max_instance = max_instance_result['instance_number__max'] or 0
 
-          created_images = []
-          skipped_images = []
-
+          # Prepare file data for Celery task
+          file_data_list = []
           for idx, file in enumerate(files, start=max_instance + 1):
-              # Check if file is DICOM
-              is_dicom = DicomParsingService.is_dicom_file(file)
+              # Read file content into memory
+              file.seek(0)
+              content = file.read()
 
-              image_data = {
-                  'study': study.id,
-                  'image_file': file,
+              file_data_list.append({
+                  'filename': file.name,
+                  'content': content,
                   'instance_number': idx,
-                  'is_dicom': is_dicom,
-              }
+              })
 
-              # Parse DICOM metadata if it's a DICOM file
-              if is_dicom:
-                  try:
-                      # Reset file pointer
-                      file.seek(0)
+          # Dispatch async task
+          user_id = request.user.id if request.user.is_authenticated else None
+          task = process_dicom_images_async.delay(study.id, file_data_list, user_id)
 
-                      # Parse DICOM
-                      dicom_dataset, metadata = DicomParsingService.parse_dicom_file(file)
-
-                      if dicom_dataset and metadata:
-                          # Check for duplicate SOP Instance UID
-                          sop_uid = str(dicom_dataset.get('SOPInstanceUID', ''))
-                          if sop_uid:
-                              existing_image = DicomImage.objects.filter(sop_instance_uid=sop_uid).first()
-                              if existing_image:
-                                  skipped_images.append({
-                                      'filename': file.name,
-                                      'reason': 'Duplicate SOP Instance UID',
-                                      'sop_instance_uid': sop_uid
-                                  })
-                                  print(f"Skipping duplicate DICOM file: {file.name} (SOP UID: {sop_uid})")
-                                  continue
-
-                          # Extract key DICOM fields
-                          image_data.update({
-                              'slice_thickness': metadata['spatial']['slice_thickness'],
-                              'pixel_spacing': str(metadata['spatial']['pixel_spacing']),
-                              'slice_location': metadata['spatial']['slice_location'],
-                              'rows': metadata['image']['rows'],
-                              'columns': metadata['image']['columns'],
-                              'bits_allocated': metadata['image']['bits_allocated'],
-                              'bits_stored': metadata['image']['bits_stored'],
-                              'window_center': str(metadata['display']['window_center']),
-                              'window_width': str(metadata['display']['window_width']),
-                              'rescale_intercept': metadata['display']['rescale_intercept'],
-                              'rescale_slope': metadata['display']['rescale_slope'],
-                              'manufacturer': metadata['equipment']['manufacturer'],
-                              'manufacturer_model': metadata['equipment']['model'],
-                              'sop_instance_uid': sop_uid,
-                              'dicom_metadata': metadata,
-                          })
-
-                          # Convert DICOM to PIL Image and save as JPEG for web display
-                          pil_image = DicomParsingService.dicom_to_pil_image(dicom_dataset)
-
-                          if pil_image:
-                              # Save as JPEG in temp file
-                              with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as temp_file:
-                                  pil_image.save(temp_file, 'JPEG', quality=90)
-                                  temp_path = temp_file.name
-
-                              # Read back and update image_file
-                              with open(temp_path, 'rb') as f:
-                                  from django.core.files import File
-                                  image_data['image_file'] = File(f, name=f"{file.name}.jpg")
-
-                                  # Create image with DICOM metadata
-                                  serializer = DicomImageSerializer(data=image_data, context={'request': request})
-                                  if serializer.is_valid():
-                                      image = serializer.save()
-                                      output_serializer = DicomImageSerializer(image, context={'request': request})
-                                      created_images.append(output_serializer.data)
-                                  else:
-                                      print(f"Serializer validation errors: {serializer.errors}")
-                                      return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-                              # Clean up temp file
-                              os.unlink(temp_path)
-                              continue
-
-                  except Exception as e:
-                      print(f"DICOM parsing error: {str(e)}")
-                      # Fall through to regular image processing
-
-              # Regular image processing (non-DICOM or DICOM parse failed)
-              file.seek(0)  # Reset file pointer
-              serializer = DicomImageSerializer(data=image_data, context={'request': request})
-              if serializer.is_valid():
-                  image = serializer.save()
-                  output_serializer = DicomImageSerializer(image, context={'request': request})
-                  created_images.append(output_serializer.data)
-              else:
-                  print(f"Serializer validation errors: {serializer.errors}")
-                  return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-          response_data = {
-              'message': f'{len(created_images)} image(s) uploaded successfully',
-              'images': created_images
-          }
-
-          if skipped_images:
-              response_data['skipped'] = skipped_images
-              response_data['message'] = f'{len(created_images)} image(s) uploaded successfully, {len(skipped_images)} skipped (duplicates)'
-
-          return Response(response_data, status=status.HTTP_201_CREATED)
+          return Response({
+              'message': f'Processing {len(files)} image(s) in background',
+              'task_id': task.id,
+              'total_files': len(files),
+              'status': 'processing'
+          }, status=status.HTTP_202_ACCEPTED)
 
 
 @extend_schema_view(
@@ -848,3 +760,27 @@ def recent_activity(request):
         })
 
     return Response(activity)
+
+
+@extend_schema(
+    tags=['Tasks'],
+    summary='Get task status',
+    description='Retrieve the status of an asynchronous task by task ID.',
+    parameters=[
+        OpenApiParameter('task_id', OpenApiTypes.STR, OpenApiParameter.PATH, description='Celery task ID'),
+    ],
+    responses={200: TaskStatusSerializer, 404: OpenApiTypes.OBJECT}
+)
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def task_status(request, task_id):
+    """Get status of a Celery task"""
+    try:
+        task = TaskStatus.objects.get(task_id=task_id)
+        serializer = TaskStatusSerializer(task)
+        return Response(serializer.data)
+    except TaskStatus.DoesNotExist:
+        return Response(
+            {'error': 'Task not found'},
+            status=status.HTTP_404_NOT_FOUND
+        )

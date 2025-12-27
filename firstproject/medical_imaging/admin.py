@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Hospital, Patient, ImagingStudy, DicomImage, Diagnosis, AuditLog, ContactMessage
+from .models import Hospital, Patient, ImagingStudy, DicomImage, Diagnosis, AuditLog, ContactMessage, TaskStatus
 # Register your models here.
 
 @admin.register(Hospital)
@@ -133,4 +133,40 @@ class ContactMessageAdmin(admin.ModelAdmin):
 
     def has_add_permission(self, request):
         # Contact messages should only be created through the form, not manually
+        return False
+
+
+@admin.register(TaskStatus)
+class TaskStatusAdmin(admin.ModelAdmin):
+    list_display = ['id', 'task_name', 'status', 'progress', 'created_at', 'study', 'user']
+    search_fields = ['task_id', 'task_name']
+    list_filter = ['status', 'task_name', 'created_at']
+    readonly_fields = ['task_id', 'created_at', 'updated_at', 'progress_percentage']
+
+    fieldsets = (
+        ('Task Information', {
+            'fields': ('task_id', 'task_name', 'status')
+        }),
+        ('Progress', {
+            'fields': ('total_items', 'processed_items', 'failed_items', 'progress_percentage')
+        }),
+        ('Results', {
+            'fields': ('result', 'error_message'),
+            'classes': ('collapse',)
+        }),
+        ('Relationships', {
+            'fields': ('study', 'user')
+        }),
+        ('Metadata', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def progress(self, obj):
+        return f"{obj.progress_percentage}%"
+    progress.short_description = 'Progress'
+
+    def has_add_permission(self, request):
+        # Tasks are created automatically by Celery
         return False

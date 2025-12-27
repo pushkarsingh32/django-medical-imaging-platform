@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Hospital, Patient, ImagingStudy, DicomImage, Diagnosis, AuditLog, ContactMessage
+from .models import Hospital, Patient, ImagingStudy, DicomImage, Diagnosis, AuditLog, ContactMessage, TaskStatus
 from django.contrib.auth.models import User
 
 class HospitalSerializer(serializers.ModelSerializer):
@@ -212,3 +212,22 @@ class ContactMessageSerializer(serializers.ModelSerializer):
         if len(value.strip()) < 10:
             raise serializers.ValidationError("Message must be at least 10 characters long.")
         return value
+
+
+class TaskStatusSerializer(serializers.ModelSerializer):
+    """
+    Serializer for TaskStatus model
+    Tracks async task progress
+    """
+    progress_percentage = serializers.ReadOnlyField()
+
+    class Meta:
+        model = TaskStatus
+        fields = [
+            'id', 'task_id', 'task_name', 'status', 'created_at', 'updated_at',
+            'total_items', 'processed_items', 'failed_items', 'progress_percentage',
+            'result', 'error_message', 'study', 'user'
+        ]
+        read_only_fields = [
+            'id', 'task_id', 'created_at', 'updated_at', 'progress_percentage'
+        ]

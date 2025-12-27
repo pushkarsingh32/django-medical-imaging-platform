@@ -12,6 +12,7 @@ from .views import (
     study_trends,
     modality_distribution,
     recent_activity,
+    task_status,
 )
 from .ai_chat_view import chat, chat_stream
 from .image_views import (
@@ -42,6 +43,8 @@ urlpatterns = [
     path('stats/trends/', study_trends, name='study-trends'),
     path('stats/modality-distribution/', modality_distribution, name='modality-distribution'),
     path('stats/recent-activity/', recent_activity, name='recent-activity'),
+    # Task status endpoint
+    path('tasks/<str:task_id>/', task_status, name='task-status'),
     # AI Chat endpoints
     path('ai/chat/', chat, name='ai-chat'),
     path('ai/chat/stream/', chat_stream, name='ai-chat-stream'),

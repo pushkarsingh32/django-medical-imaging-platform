@@ -326,3 +326,65 @@ class ContactMessage(models.Model):
 
     def __str__(self):
         return f"{self.name} - {self.subject} ({self.created_at.date()})"
+
+
+class TaskStatus(models.Model):
+    """
+    Track status of asynchronous Celery tasks
+    """
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('processing', 'Processing'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+    ]
+
+    task_id = models.CharField(max_length=255, unique=True, db_index=True)
+    task_name = models.CharField(max_length=255)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    # Task details
+    total_items = models.IntegerField(default=0)
+    processed_items = models.IntegerField(default=0)
+    failed_items = models.IntegerField(default=0)
+
+    # Result data
+    result = models.JSONField(null=True, blank=True)
+    error_message = models.TextField(blank=True)
+
+    # Relationships
+    study = models.ForeignKey(
+        'ImagingStudy',
+        on_delete=models.CASCADE,
+        related_name='tasks',
+        null=True,
+        blank=True
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Task Status'
+        verbose_name_plural = 'Task Statuses'
+        indexes = [
+            models.Index(fields=['task_id']),
+            models.Index(fields=['status', '-created_at']),
+            models.Index(fields=['study', '-created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.task_name} - {self.status}"
+
+    @property
+    def progress_percentage(self):
+        """Calculate progress percentage"""
+        if self.total_items == 0:
+            return 0
+        return int((self.processed_items / self.total_items) * 100)
