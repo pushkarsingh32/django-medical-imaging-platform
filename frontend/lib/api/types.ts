@@ -219,7 +219,7 @@ export interface PatientReport {
   pdf_file: string;
   file_url: string;
   file_size: number;
-  file_size_mb: number;
+  file_size_mb: string;  // Now includes unit (KB/MB)
   filename: string;
   studies_count: number;
   generated_at: string;

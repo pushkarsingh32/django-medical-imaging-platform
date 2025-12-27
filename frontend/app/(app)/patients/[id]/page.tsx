@@ -340,9 +340,9 @@ export default function PatientDetailPage() {
                         <TableCell className="font-medium">{report.filename}</TableCell>
                         <TableCell>{new Date(report.generated_at).toLocaleString()}</TableCell>
                         <TableCell>{report.studies_count}</TableCell>
-                        <TableCell>{report.file_size_mb} MB</TableCell>
+                        <TableCell>{report.file_size_mb}</TableCell>
                         <TableCell>{report.generated_by_name || 'System'}</TableCell>
-                        <TableCell className="text-right space-x-2">
+                        <TableCell className="text-right">
                           <Button
                             size="sm"
                             variant="outline"
@@ -350,15 +350,6 @@ export default function PatientDetailPage() {
                           >
                             <Eye className="h-4 w-4 mr-1" />
                             View
-                          </Button>
-                          <Button
-                            size="sm"
-                            asChild
-                          >
-                            <a href={report.file_url} download={report.filename}>
-                              <Download className="h-4 w-4 mr-1" />
-                              Download
-                            </a>
                           </Button>
                         </TableCell>
                       </TableRow>
