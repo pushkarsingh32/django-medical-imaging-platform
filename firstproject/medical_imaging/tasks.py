@@ -8,8 +8,10 @@ import tempfile
 import os
 import logging
 
-from .models import ImagingStudy, DicomImage, TaskStatus
+from .models import ImagingStudy, DicomImage, TaskStatus, Patient
 from .dicom_service import DicomParsingService
+from .pdf_service import PatientReportGenerator
+from django.core.files.storage import default_storage
 
 logger = logging.getLogger(__name__)
 
@@ -195,3 +197,90 @@ def process_dicom_images_async(self, study_id, file_data_list, user_id=None):
         'errors': errors,
         'task_id': task_id,
     }
+
+
+@shared_task(bind=True, max_retries=3)
+def generate_patient_report_async(self, patient_id, user_id=None):
+    """
+    Generate PDF report for a patient asynchronously
+
+    Args:
+        patient_id: ID of the patient
+        user_id: ID of the user who requested the report
+
+    Returns:
+        dict: Results with pdf_url and filename
+    """
+    task_id = self.request.id
+
+    # Create task status
+    task_status, created = TaskStatus.objects.get_or_create(
+        task_id=task_id,
+        defaults={
+            'task_name': 'PDF Report Generation',
+            'status': 'processing',
+            'total_items': 1,
+            'user_id': user_id,
+        }
+    )
+
+    if not created:
+        task_status.status = 'processing'
+        task_status.save()
+
+    try:
+        # Get patient
+        patient = Patient.objects.get(id=patient_id)
+        logger.info(f"Generating PDF report for patient {patient.medical_record_number}")
+
+        # Update progress
+        task_status.processed_items = 0
+        task_status.save()
+
+        # Generate PDF
+        generator = PatientReportGenerator(patient)
+        pdf_bytes = generator.generate()
+
+        logger.info(f"PDF generated successfully, size: {len(pdf_bytes)} bytes")
+
+        # Save PDF to storage
+        filename = f"patient_reports/patient_{patient.medical_record_number}_{task_id[:8]}.pdf"
+        pdf_file = ContentFile(pdf_bytes)
+        saved_path = default_storage.save(filename, pdf_file)
+
+        # Get URL
+        pdf_url = default_storage.url(saved_path)
+
+        logger.info(f"PDF saved to: {saved_path}")
+
+        # Update task status
+        task_status.processed_items = 1
+        task_status.status = 'completed'
+        task_status.result = {
+            'pdf_url': pdf_url,
+            'filename': f"patient_{patient.medical_record_number}_report.pdf",
+            'file_size': len(pdf_bytes),
+        }
+        task_status.save()
+
+        return {
+            'pdf_url': pdf_url,
+            'filename': f"patient_{patient.medical_record_number}_report.pdf",
+            'task_id': task_id,
+        }
+
+    except Patient.DoesNotExist:
+        logger.error(f"Patient {patient_id} not found")
+        task_status.status = 'failed'
+        task_status.error_message = f'Patient with ID {patient_id} not found'
+        task_status.failed_items = 1
+        task_status.save()
+        raise
+
+    except Exception as e:
+        logger.error(f"PDF generation failed: {str(e)}", exc_info=True)
+        task_status.status = 'failed'
+        task_status.error_message = str(e)
+        task_status.failed_items = 1
+        task_status.save()
+        raise

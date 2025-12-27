@@ -158,6 +158,35 @@ class PatientViewSet(viewsets.ModelViewSet):
         serializer = ImagingStudyListSerializer(studies, many=True)
         return Response(serializer.data)
 
+    @extend_schema(
+        tags=['Patients'],
+        summary='Generate patient PDF report',
+        description='Generate a comprehensive PDF report for a patient including all studies and diagnoses. Returns task_id for async processing.',
+        responses={202: OpenApiTypes.OBJECT}
+    )
+    @action(detail=True, methods=['post'])
+    def generate_report(self, request, pk=None):
+        """
+        Custom endpoint: POST /api/patients/{id}/generate_report/
+        Generates a comprehensive PDF report for the patient asynchronously
+        Returns task_id for progress tracking
+        """
+        from .tasks import generate_patient_report_async
+
+        patient = self.get_object()
+        user_id = request.user.id if request.user.is_authenticated else None
+
+        # Dispatch async task
+        task = generate_patient_report_async.delay(patient.id, user_id)
+
+        return Response({
+            'message': 'Generating PDF report...',
+            'task_id': task.id,
+            'patient_id': patient.id,
+            'patient_name': patient.full_name,
+            'status': 'processing'
+        }, status=status.HTTP_202_ACCEPTED)
+
 
 @extend_schema_view(
     list=extend_schema(
