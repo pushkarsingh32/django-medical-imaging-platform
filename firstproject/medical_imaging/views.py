@@ -10,7 +10,7 @@ from django.db.models import Count, Q, Max
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiExample
 from drf_spectacular.types import OpenApiTypes
 
-from .models import Hospital, Patient, ImagingStudy, DicomImage, Diagnosis, AuditLog, ContactMessage
+from .models import Hospital, Patient, ImagingStudy, DicomImage, Diagnosis, AuditLog, ContactMessage, TaskStatus
 from .serializers import (
     HospitalSerializer,
     PatientListSerializer,
