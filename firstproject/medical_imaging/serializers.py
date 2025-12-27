@@ -179,7 +179,8 @@ class AuditLogSerializer(serializers.ModelSerializer):
           model = AuditLog
           fields = ['id', 'user', 'username', 'action', 'resource_type', 'resource_id',
                     'ip_address', 'user_agent', 'timestamp', 'details']
-          read_only_fields = '__all__'
+          read_only_fields = ['id', 'user', 'username', 'action', 'resource_type', 'resource_id',
+                              'ip_address', 'user_agent', 'timestamp', 'details']
 
 
 class UserSerializer(serializers.ModelSerializer):

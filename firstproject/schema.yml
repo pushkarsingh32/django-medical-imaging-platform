@@ -1,0 +1,2639 @@
+openapi: 3.0.3
+info:
+  title: Medical Imaging Platform API
+  version: 1.0.0
+  description: "\n    A comprehensive medical imaging management system with DICOM
+    support.\n    \n    This API provides endpoints for managing:\n    - Hospitals
+    and healthcare facilities\n    - Patients and medical records\n    - Imaging studies
+    (CT, MRI, X-Ray, Ultrasound)\n    - DICOM image files with metadata\n    - Radiological
+    diagnoses\n    \n    Features:\n    - DICOM standard compliance\n    - Progressive
+    image loading\n    - Redis-based caching\n    - Advanced filtering and search\n
+    \   - Real-time statistics\n    "
+  contact:
+    name: Medical Imaging Platform
+    email: support@medicalimaging.example.com
+  license:
+    name: MIT License
+paths:
+  /api/audit-logs/:
+    get:
+      operationId: audit_logs_list
+      description: Retrieve read-only audit logs for compliance and security tracking.
+      summary: List audit logs
+      parameters:
+      - in: query
+        name: action
+        schema:
+          type: string
+        description: Filter by action type
+      - in: query
+        name: ordering
+        schema:
+          type: string
+        description: 'Order by: timestamp (prefix with - for descending)'
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: resource_type
+        schema:
+          type: string
+        description: Filter by resource type
+      - in: query
+        name: search
+        schema:
+          type: string
+        description: Search by resource type or IP address
+      - in: query
+        name: user
+        schema:
+          type: integer
+        description: Filter by user ID
+      tags:
+      - Audit
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAuditLogList'
+          description: ''
+  /api/audit-logs/{id}/:
+    get:
+      operationId: audit_logs_retrieve
+      description: Retrieve detailed information about a specific audit log entry.
+      summary: Get audit log details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this audit log.
+        required: true
+      tags:
+      - Audit
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditLog'
+          description: ''
+  /api/contact/:
+    post:
+      operationId: contact_create
+      description: Public endpoint for contact form submissions. No authentication
+        required.
+      summary: Submit contact form
+      tags:
+      - Contact
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContactMessageRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ContactMessageRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ContactMessageRequest'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+          description: ''
+  /api/diagnoses/:
+    get:
+      operationId: diagnoses_list
+      description: Retrieve a list of radiological diagnoses with filtering and search.
+      summary: List all diagnoses
+      parameters:
+      - in: query
+        name: ordering
+        schema:
+          type: string
+        description: 'Order by: diagnosed_at, severity (prefix with - for descending)'
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: radiologist
+        schema:
+          type: integer
+        description: Filter by radiologist user ID
+      - in: query
+        name: search
+        schema:
+          type: string
+        description: Search by findings, impression, or recommendations
+      - in: query
+        name: severity
+        schema:
+          type: string
+        description: Filter by severity (low, moderate, high, critical)
+      tags:
+      - Diagnoses
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDiagnosisList'
+          description: ''
+    post:
+      operationId: diagnoses_create
+      description: Create a new radiological diagnosis for a study. Automatically
+        sets the radiologist to the current user and updates study status to completed.
+      summary: Create a diagnosis
+      tags:
+      - Diagnoses
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DiagnosisRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DiagnosisRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DiagnosisRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Diagnosis'
+          description: ''
+  /api/diagnoses/{id}/:
+    get:
+      operationId: diagnoses_retrieve
+      description: Retrieve detailed information about a specific diagnosis.
+      summary: Get diagnosis details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this diagnosis.
+        required: true
+      tags:
+      - Diagnoses
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Diagnosis'
+          description: ''
+    put:
+      operationId: diagnoses_update
+      description: Update all fields of a diagnosis.
+      summary: Update diagnosis
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this diagnosis.
+        required: true
+      tags:
+      - Diagnoses
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DiagnosisRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DiagnosisRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DiagnosisRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Diagnosis'
+          description: ''
+    patch:
+      operationId: diagnoses_partial_update
+      description: Update specific fields of a diagnosis.
+      summary: Partially update diagnosis
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this diagnosis.
+        required: true
+      tags:
+      - Diagnoses
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedDiagnosisRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedDiagnosisRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedDiagnosisRequest'
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Diagnosis'
+          description: ''
+    delete:
+      operationId: diagnoses_destroy
+      description: Remove a diagnosis from the system.
+      summary: Delete diagnosis
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this diagnosis.
+        required: true
+      tags:
+      - Diagnoses
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/hospitals/:
+    get:
+      operationId: hospitals_list
+      description: Retrieve a list of all hospitals with optional search and ordering.
+      summary: List all hospitals
+      parameters:
+      - in: query
+        name: ordering
+        schema:
+          type: string
+        description: 'Order by: name, created_at, -name, -created_at'
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: search
+        schema:
+          type: string
+        description: Search by hospital name or contact email
+      tags:
+      - Hospitals
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedHospitalList'
+          description: ''
+    post:
+      operationId: hospitals_create
+      description: Register a new hospital in the system.
+      summary: Create a new hospital
+      tags:
+      - Hospitals
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HospitalRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/HospitalRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/HospitalRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Hospital'
+          description: ''
+  /api/hospitals/{id}/:
+    get:
+      operationId: hospitals_retrieve
+      description: Retrieve detailed information about a specific hospital including
+        patient count.
+      summary: Get hospital details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this hospital.
+        required: true
+      tags:
+      - Hospitals
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Hospital'
+          description: ''
+    put:
+      operationId: hospitals_update
+      description: Update all fields of a hospital.
+      summary: Update hospital information
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this hospital.
+        required: true
+      tags:
+      - Hospitals
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HospitalRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/HospitalRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/HospitalRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Hospital'
+          description: ''
+    patch:
+      operationId: hospitals_partial_update
+      description: Update specific fields of a hospital.
+      summary: Partially update hospital
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this hospital.
+        required: true
+      tags:
+      - Hospitals
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedHospitalRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedHospitalRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedHospitalRequest'
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Hospital'
+          description: ''
+    delete:
+      operationId: hospitals_destroy
+      description: Remove a hospital from the system.
+      summary: Delete hospital
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this hospital.
+        required: true
+      tags:
+      - Hospitals
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/images/:
+    get:
+      operationId: images_list
+      description: Retrieve a list of DICOM and standard medical images with filtering
+        by study.
+      summary: List all medical images
+      parameters:
+      - in: query
+        name: ordering
+        schema:
+          type: string
+        description: 'Order by: instance_number, uploaded_at (prefix with - for descending)'
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: study
+        schema:
+          type: integer
+        description: Filter by study ID
+      tags:
+      - Images
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDicomImageList'
+          description: ''
+    post:
+      operationId: images_create
+      description: Upload a single DICOM or standard medical image. For multiple uploads,
+        use the study upload endpoint.
+      summary: Upload a single image
+      tags:
+      - Images
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DicomImageRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DicomImageRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DicomImageRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DicomImage'
+          description: ''
+  /api/images/{image_id}/invalidate-cache/:
+    post:
+      operationId: images_invalidate_cache_create
+      description: |-
+        Invalidate all cached versions of an image.
+        Useful when an image is updated.
+
+        Usage: POST /api/images/{image_id}/invalidate-cache/
+      parameters:
+      - in: path
+        name: image_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - images
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/images/{image_id}/metadata/:
+    get:
+      operationId: images_metadata_retrieve
+      description: |-
+        Get metadata about an image including cache status.
+        Useful for debugging and monitoring.
+
+        Usage: GET /api/images/{image_id}/metadata/
+
+        Returns:
+            {
+                "id": 123,
+                "file_name": "scan.jpg",
+                "file_size": 1048576,
+                "cache_status": {
+                    "thumbnail": {"cached": true, "size_bytes": 15000},
+                    "preview": {"cached": false, "size_bytes": 0},
+                    "webp": {"cached": true, "size_bytes": 50000},
+                    "full": {"cached": true, "size_bytes": 1048576}
+                }
+            }
+      parameters:
+      - in: path
+        name: image_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - images
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/images/{id}/:
+    get:
+      operationId: images_retrieve
+      description: Retrieve detailed information about a specific medical image including
+        DICOM metadata if available.
+      summary: Get image details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this dicom image.
+        required: true
+      tags:
+      - Images
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DicomImage'
+          description: ''
+    put:
+      operationId: images_update
+      description: Update image metadata and information.
+      summary: Update image metadata
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this dicom image.
+        required: true
+      tags:
+      - Images
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DicomImageRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DicomImageRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DicomImageRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DicomImage'
+          description: ''
+    patch:
+      operationId: images_partial_update
+      description: Update specific fields of an image.
+      summary: Partially update image
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this dicom image.
+        required: true
+      tags:
+      - Images
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedDicomImageRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedDicomImageRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedDicomImageRequest'
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DicomImage'
+          description: ''
+    delete:
+      operationId: images_destroy
+      description: Remove an image from the system.
+      summary: Delete image
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this dicom image.
+        required: true
+      tags:
+      - Images
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/images/cache-stats/:
+    get:
+      operationId: images_cache_stats_retrieve
+      description: |-
+        Get overall cache statistics.
+        Shows how well the cache is performing.
+
+        Usage: GET /api/images/cache-stats/
+
+        Returns cache hit/miss rates and memory usage.
+      tags:
+      - images
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/patients/:
+    get:
+      operationId: patients_list
+      description: Retrieve a paginated list of patients with filtering and search
+        capabilities.
+      summary: List all patients
+      parameters:
+      - in: query
+        name: gender
+        schema:
+          type: string
+        description: Filter by gender (M/F/O)
+      - in: query
+        name: hospital
+        schema:
+          type: integer
+        description: Filter by hospital ID
+      - in: query
+        name: ordering
+        schema:
+          type: string
+        description: 'Order by: last_name, created_at, date_of_birth (prefix with
+          - for descending)'
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: search
+        schema:
+          type: string
+        description: Search by name, medical record number, or email
+      tags:
+      - Patients
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPatientListList'
+          description: ''
+    post:
+      operationId: patients_create
+      description: Register a new patient in the system with their demographic and
+        medical information.
+      summary: Create a new patient
+      tags:
+      - Patients
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatientListRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatientListRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatientListRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatientList'
+          description: ''
+  /api/patients/{id}/:
+    get:
+      operationId: patients_retrieve
+      description: Retrieve detailed information about a specific patient including
+        all imaging studies.
+      summary: Get patient details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this patient.
+        required: true
+      tags:
+      - Patients
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatientDetail'
+          description: ''
+    put:
+      operationId: patients_update
+      description: Update all fields of a patient record.
+      summary: Update patient information
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this patient.
+        required: true
+      tags:
+      - Patients
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatientListRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatientListRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatientListRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatientList'
+          description: ''
+    patch:
+      operationId: patients_partial_update
+      description: Update specific fields of a patient record.
+      summary: Partially update patient
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this patient.
+        required: true
+      tags:
+      - Patients
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedPatientListRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedPatientListRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedPatientListRequest'
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatientList'
+          description: ''
+    delete:
+      operationId: patients_destroy
+      description: Remove a patient from the system.
+      summary: Delete patient
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this patient.
+        required: true
+      tags:
+      - Patients
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/patients/{id}/studies/:
+    get:
+      operationId: patients_studies_list
+      description: Retrieve all imaging studies for a specific patient.
+      summary: Get patient studies
+      parameters:
+      - in: query
+        name: gender
+        schema:
+          type: string
+          enum:
+          - F
+          - M
+          - O
+        description: |-
+          * `M` - Male
+          * `F` - Female
+          * `O` - Other
+      - in: query
+        name: hospital
+        schema:
+          type: integer
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this patient.
+        required: true
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - Patients
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedImagingStudyListList'
+          description: ''
+  /api/stats/:
+    get:
+      operationId: stats_retrieve
+      description: Retrieve overall system statistics including patient count, study
+        count, and recent activity metrics.
+      summary: Get dashboard statistics
+      tags:
+      - Statistics
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_patients:
+                    type: integer
+                  total_studies:
+                    type: integer
+                  total_images:
+                    type: integer
+                  total_hospitals:
+                    type: integer
+                  new_patients_this_month:
+                    type: integer
+                  studies_this_week:
+                    type: integer
+          description: ''
+  /api/stats/modality-distribution/:
+    get:
+      operationId: stats_modality_distribution_retrieve
+      description: Retrieve the distribution of studies by imaging modality.
+      summary: Get modality distribution
+      tags:
+      - Statistics
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    modality:
+                      type: string
+                    count:
+                      type: integer
+          description: ''
+  /api/stats/recent-activity/:
+    get:
+      operationId: stats_recent_activity_retrieve
+      description: Retrieve recent study activity with patient and hospital information.
+      summary: Get recent activity
+      parameters:
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: 'Number of recent studies to retrieve (default: 10)'
+      tags:
+      - Statistics
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    modality:
+                      type: string
+                    body_part:
+                      type: string
+                    patient_name:
+                      type: string
+                    hospital_name:
+                      type: string
+                    status:
+                      type: string
+                    study_date:
+                      type: string
+                      format: date-time
+          description: ''
+  /api/stats/trends/:
+    get:
+      operationId: stats_trends_retrieve
+      description: Retrieve study count trends over a specified time period.
+      summary: Get study trends
+      parameters:
+      - in: query
+        name: days
+        schema:
+          type: integer
+        description: 'Number of days to retrieve trends for (default: 30)'
+      tags:
+      - Statistics
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    date:
+                      type: string
+                      format: date
+                    count:
+                      type: integer
+          description: ''
+  /api/studies/:
+    get:
+      operationId: studies_list
+      description: Retrieve a paginated list of imaging studies with filtering and
+        search.
+      summary: List all imaging studies
+      parameters:
+      - in: query
+        name: body_part
+        schema:
+          type: string
+        description: Filter by body part
+      - in: query
+        name: modality
+        schema:
+          type: string
+        description: Filter by modality (CT, MRI, XRAY, US, PET, MAMMO)
+      - in: query
+        name: ordering
+        schema:
+          type: string
+        description: 'Order by: study_date, created_at (prefix with - for descending)'
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: patient
+        schema:
+          type: integer
+        description: Filter by patient ID
+      - in: query
+        name: search
+        schema:
+          type: string
+        description: Search by patient name, MRN, body part, or clinical notes
+      - in: query
+        name: status
+        schema:
+          type: string
+        description: Filter by status (pending, in_progress, completed)
+      tags:
+      - Studies
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedImagingStudyListList'
+          description: ''
+    post:
+      operationId: studies_create
+      description: Create a new imaging study for a patient.
+      summary: Create a new imaging study
+      tags:
+      - Studies
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImagingStudyListRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ImagingStudyListRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ImagingStudyListRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImagingStudyList'
+          description: ''
+  /api/studies/{id}/:
+    get:
+      operationId: studies_retrieve
+      description: Retrieve detailed information about a specific study including
+        images and diagnosis.
+      summary: Get study details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this imaging study.
+        required: true
+      tags:
+      - Studies
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImagingStudyDetail'
+          description: ''
+    put:
+      operationId: studies_update
+      description: Update all fields of an imaging study.
+      summary: Update study information
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this imaging study.
+        required: true
+      tags:
+      - Studies
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImagingStudyListRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ImagingStudyListRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ImagingStudyListRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImagingStudyList'
+          description: ''
+    patch:
+      operationId: studies_partial_update
+      description: Update specific fields of an imaging study.
+      summary: Partially update study
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this imaging study.
+        required: true
+      tags:
+      - Studies
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedImagingStudyListRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedImagingStudyListRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedImagingStudyListRequest'
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImagingStudyList'
+          description: ''
+    delete:
+      operationId: studies_destroy
+      description: Remove an imaging study from the system.
+      summary: Delete study
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this imaging study.
+        required: true
+      tags:
+      - Studies
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/studies/{id}/diagnosis/:
+    post:
+      operationId: studies_diagnosis_create
+      description: Create a new diagnosis for an imaging study. Study must not already
+        have a diagnosis.
+      summary: Add diagnosis to study
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this imaging study.
+        required: true
+      tags:
+      - Diagnoses
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImagingStudyListRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ImagingStudyListRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ImagingStudyListRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/studies/{id}/upload_images/:
+    post:
+      operationId: studies_upload_images_create
+      description: Upload multiple DICOM or standard medical images to a study. DICOM
+        files are automatically parsed for metadata. Duplicate DICOM files (same SOP
+        Instance UID) are skipped.
+      summary: Upload images to study
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this imaging study.
+        required: true
+      tags:
+      - Images
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                images:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: One or more image files (DICOM or JPEG/PNG)
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  images:
+                    type: array
+                  skipped:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        filename:
+                          type: string
+                        reason:
+                          type: string
+                        sop_instance_uid:
+                          type: string
+          description: ''
+  /api/studies/pending/:
+    get:
+      operationId: studies_pending_list
+      description: Retrieve all studies with pending status awaiting review.
+      summary: Get pending studies
+      parameters:
+      - in: query
+        name: body_part
+        schema:
+          type: string
+      - in: query
+        name: modality
+        schema:
+          type: string
+          enum:
+          - CT
+          - MRI
+          - ULTRASOUND
+          - XRAY
+        description: |-
+          * `CT` - CT SCAN
+          * `MRI` - MRI
+          * `XRAY` - X-Ray
+          * `ULTRASOUND` - Ultrasound
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: patient
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - archived
+          - completed
+          - in_progress
+          - pending
+        description: |-
+          * `pending` - Pending Review
+          * `in_progress` - In Progress
+          * `completed` - Completed
+          * `archived` - Archieved
+      tags:
+      - Studies
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedImagingStudyListList'
+          description: ''
+  /api/studies/statistics/:
+    get:
+      operationId: studies_statistics_retrieve
+      description: Retrieve summary statistics including total studies, status breakdown,
+        and modality distribution.
+      summary: Get study statistics
+      tags:
+      - Statistics
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+components:
+  schemas:
+    ActionEnum:
+      enum:
+      - view
+      - create
+      - update
+      - delete
+      - download
+      type: string
+      description: |-
+        * `view` - Viewed
+        * `create` - Created
+        * `update` - Updated
+        * `delete` - Deleted
+        * `download` - Downloaded
+    AuditLog:
+      type: object
+      description: Serializer for audit logs (read-only for compliance)
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        user:
+          type: integer
+          readOnly: true
+          nullable: true
+        username:
+          type: string
+          readOnly: true
+        action:
+          allOf:
+          - $ref: '#/components/schemas/ActionEnum'
+          readOnly: true
+        resource_type:
+          type: string
+          readOnly: true
+          description: e.g., Patient, ImagingStudy
+        resource_id:
+          type: integer
+          readOnly: true
+          description: ID of the affected record
+        ip_address:
+          type: string
+          readOnly: true
+        user_agent:
+          type: string
+          readOnly: true
+        timestamp:
+          type: string
+          format: date-time
+          readOnly: true
+        details:
+          readOnly: true
+      required:
+      - action
+      - details
+      - id
+      - ip_address
+      - resource_id
+      - resource_type
+      - timestamp
+      - user
+      - user_agent
+      - username
+    ContactMessageRequest:
+      type: object
+      description: |-
+        Serializer for ContactMessage model
+        Public-facing API for contact form submissions
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        email:
+          type: string
+          format: email
+          minLength: 1
+          maxLength: 254
+        phone:
+          type: string
+          maxLength: 20
+        subject:
+          type: string
+          minLength: 1
+          maxLength: 300
+        message:
+          type: string
+          minLength: 1
+      required:
+      - email
+      - message
+      - name
+      - subject
+    Diagnosis:
+      type: object
+      description: Serializer for Diagnosis
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        study:
+          type: integer
+          readOnly: true
+        radiologist:
+          type: integer
+          readOnly: true
+          nullable: true
+        radiologist_name:
+          type: string
+          readOnly: true
+        findings:
+          type: string
+          description: Detailed radiologist findings
+        impression:
+          type: string
+          description: Summary/conclusion
+        severity:
+          $ref: '#/components/schemas/SeverityEnum'
+        recommendations:
+          type: string
+        diagnosed_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - diagnosed_at
+      - findings
+      - id
+      - impression
+      - radiologist
+      - radiologist_name
+      - study
+      - updated_at
+    DiagnosisRequest:
+      type: object
+      description: Serializer for Diagnosis
+      properties:
+        findings:
+          type: string
+          minLength: 1
+          description: Detailed radiologist findings
+        impression:
+          type: string
+          minLength: 1
+          description: Summary/conclusion
+        severity:
+          $ref: '#/components/schemas/SeverityEnum'
+        recommendations:
+          type: string
+      required:
+      - findings
+      - impression
+    DicomImage:
+      type: object
+      description: Serializer for DICOM images with full metadata support
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        study:
+          type: integer
+        instance_number:
+          type: integer
+          maximum: 2147483647
+          minimum: 1
+          description: Image sequence number in study
+        image_file:
+          type: string
+          format: uri
+        image_url:
+          type: string
+          readOnly: true
+        slice_thickness:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+          description: Slice thickness in mm
+        pixel_spacing:
+          type: string
+          description: Pixel spacing (row, column)
+          maxLength: 50
+        slice_location:
+          type: number
+          format: double
+          nullable: true
+          description: Slice location in mm
+        rows:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+          description: Image height in pixels
+        columns:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+          description: Image width in pixels
+        bits_allocated:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+          description: Bits allocated per pixel
+        bits_stored:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+          description: Bits stored per pixel
+        window_center:
+          type: string
+          description: Window center for display
+          maxLength: 50
+        window_width:
+          type: string
+          description: Window width for display
+          maxLength: 50
+        rescale_intercept:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          description: Rescale intercept for Hounsfield units
+        rescale_slope:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          description: Rescale slope for Hounsfield units
+        manufacturer:
+          type: string
+          description: Equipment manufacturer
+          maxLength: 200
+        manufacturer_model:
+          type: string
+          description: Equipment model
+          maxLength: 200
+        sop_instance_uid:
+          type: string
+          nullable: true
+          description: SOP Instance UID (unique DICOM identifier)
+          maxLength: 200
+        dicom_metadata:
+          description: Complete DICOM metadata as JSON
+        file_size_bytes:
+          type: integer
+          readOnly: true
+        is_dicom:
+          type: boolean
+          description: True if file is valid DICOM format
+        uploaded_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - file_size_bytes
+      - id
+      - image_file
+      - image_url
+      - instance_number
+      - study
+      - uploaded_at
+    DicomImageRequest:
+      type: object
+      description: Serializer for DICOM images with full metadata support
+      properties:
+        study:
+          type: integer
+        instance_number:
+          type: integer
+          maximum: 2147483647
+          minimum: 1
+          description: Image sequence number in study
+        image_file:
+          type: string
+          format: binary
+        slice_thickness:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+          description: Slice thickness in mm
+        pixel_spacing:
+          type: string
+          description: Pixel spacing (row, column)
+          maxLength: 50
+        slice_location:
+          type: number
+          format: double
+          nullable: true
+          description: Slice location in mm
+        rows:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+          description: Image height in pixels
+        columns:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+          description: Image width in pixels
+        bits_allocated:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+          description: Bits allocated per pixel
+        bits_stored:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+          description: Bits stored per pixel
+        window_center:
+          type: string
+          description: Window center for display
+          maxLength: 50
+        window_width:
+          type: string
+          description: Window width for display
+          maxLength: 50
+        rescale_intercept:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          description: Rescale intercept for Hounsfield units
+        rescale_slope:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          description: Rescale slope for Hounsfield units
+        manufacturer:
+          type: string
+          description: Equipment manufacturer
+          maxLength: 200
+        manufacturer_model:
+          type: string
+          description: Equipment model
+          maxLength: 200
+        sop_instance_uid:
+          type: string
+          nullable: true
+          description: SOP Instance UID (unique DICOM identifier)
+          maxLength: 200
+        dicom_metadata:
+          description: Complete DICOM metadata as JSON
+        is_dicom:
+          type: boolean
+          description: True if file is valid DICOM format
+      required:
+      - image_file
+      - instance_number
+      - study
+    GenderEnum:
+      enum:
+      - M
+      - F
+      - O
+      type: string
+      description: |-
+        * `M` - Male
+        * `F` - Female
+        * `O` - Other
+    Hospital:
+      type: object
+      description: |-
+        Serializer for Hospital model
+        Converts Hospita objects to/from JSON
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        address:
+          type: string
+        contact_email:
+          type: string
+          format: email
+          maxLength: 254
+        contact_phone:
+          type: string
+          maxLength: 20
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        patient_count:
+          type: string
+          readOnly: true
+      required:
+      - address
+      - contact_email
+      - contact_phone
+      - created_at
+      - id
+      - name
+      - patient_count
+    HospitalRequest:
+      type: object
+      description: |-
+        Serializer for Hospital model
+        Converts Hospita objects to/from JSON
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        address:
+          type: string
+          minLength: 1
+        contact_email:
+          type: string
+          format: email
+          minLength: 1
+          maxLength: 254
+        contact_phone:
+          type: string
+          minLength: 1
+          maxLength: 20
+      required:
+      - address
+      - contact_email
+      - contact_phone
+      - name
+    ImagingStudyDetail:
+      type: object
+      description: |-
+        Detailed serializer for single imaging study
+        Includes images and diagnosis
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        patient:
+          type: integer
+        patient_name:
+          type: string
+          readOnly: true
+        patient_mrn:
+          type: string
+          readOnly: true
+        study_date:
+          type: string
+          format: date-time
+        modality:
+          $ref: '#/components/schemas/ModalityEnum'
+        body_part:
+          type: string
+          description: e.g. Chest, Lung, Brain
+          maxLength: 100
+        status:
+          $ref: '#/components/schemas/StatusEnum'
+        referring_physician:
+          type: string
+          maxLength: 200
+        clinical_notes:
+          type: string
+          description: Reason for study
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/DicomImage'
+          readOnly: true
+        diagnosis:
+          allOf:
+          - $ref: '#/components/schemas/Diagnosis'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - body_part
+      - created_at
+      - diagnosis
+      - id
+      - images
+      - modality
+      - patient
+      - patient_mrn
+      - patient_name
+      - study_date
+      - updated_at
+    ImagingStudyList:
+      type: object
+      description: Lightweight serializer for imaging study list
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        patient:
+          type: integer
+        patient_name:
+          type: string
+          readOnly: true
+        patient_mrn:
+          type: string
+          readOnly: true
+        study_date:
+          type: string
+          format: date-time
+        modality:
+          $ref: '#/components/schemas/ModalityEnum'
+        body_part:
+          type: string
+          description: e.g. Chest, Lung, Brain
+          maxLength: 100
+        status:
+          $ref: '#/components/schemas/StatusEnum'
+        clinical_notes:
+          type: string
+          description: Reason for study
+        referring_physician:
+          type: string
+          maxLength: 200
+        image_count:
+          type: string
+          readOnly: true
+        has_diagnosis:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - body_part
+      - created_at
+      - has_diagnosis
+      - id
+      - image_count
+      - modality
+      - patient
+      - patient_mrn
+      - patient_name
+      - study_date
+    ImagingStudyListRequest:
+      type: object
+      description: Lightweight serializer for imaging study list
+      properties:
+        patient:
+          type: integer
+        study_date:
+          type: string
+          format: date-time
+        modality:
+          $ref: '#/components/schemas/ModalityEnum'
+        body_part:
+          type: string
+          minLength: 1
+          description: e.g. Chest, Lung, Brain
+          maxLength: 100
+        status:
+          $ref: '#/components/schemas/StatusEnum'
+        clinical_notes:
+          type: string
+          description: Reason for study
+        referring_physician:
+          type: string
+          maxLength: 200
+      required:
+      - body_part
+      - modality
+      - patient
+      - study_date
+    ModalityEnum:
+      enum:
+      - CT
+      - MRI
+      - XRAY
+      - ULTRASOUND
+      type: string
+      description: |-
+        * `CT` - CT SCAN
+        * `MRI` - MRI
+        * `XRAY` - X-Ray
+        * `ULTRASOUND` - Ultrasound
+    PaginatedAuditLogList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditLog'
+    PaginatedDiagnosisList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Diagnosis'
+    PaginatedDicomImageList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/DicomImage'
+    PaginatedHospitalList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Hospital'
+    PaginatedImagingStudyListList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImagingStudyList'
+    PaginatedPatientListList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PatientList'
+    PatchedDiagnosisRequest:
+      type: object
+      description: Serializer for Diagnosis
+      properties:
+        findings:
+          type: string
+          minLength: 1
+          description: Detailed radiologist findings
+        impression:
+          type: string
+          minLength: 1
+          description: Summary/conclusion
+        severity:
+          $ref: '#/components/schemas/SeverityEnum'
+        recommendations:
+          type: string
+    PatchedDicomImageRequest:
+      type: object
+      description: Serializer for DICOM images with full metadata support
+      properties:
+        study:
+          type: integer
+        instance_number:
+          type: integer
+          maximum: 2147483647
+          minimum: 1
+          description: Image sequence number in study
+        image_file:
+          type: string
+          format: binary
+        slice_thickness:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+          description: Slice thickness in mm
+        pixel_spacing:
+          type: string
+          description: Pixel spacing (row, column)
+          maxLength: 50
+        slice_location:
+          type: number
+          format: double
+          nullable: true
+          description: Slice location in mm
+        rows:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+          description: Image height in pixels
+        columns:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+          description: Image width in pixels
+        bits_allocated:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+          description: Bits allocated per pixel
+        bits_stored:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+          description: Bits stored per pixel
+        window_center:
+          type: string
+          description: Window center for display
+          maxLength: 50
+        window_width:
+          type: string
+          description: Window width for display
+          maxLength: 50
+        rescale_intercept:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          description: Rescale intercept for Hounsfield units
+        rescale_slope:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          description: Rescale slope for Hounsfield units
+        manufacturer:
+          type: string
+          description: Equipment manufacturer
+          maxLength: 200
+        manufacturer_model:
+          type: string
+          description: Equipment model
+          maxLength: 200
+        sop_instance_uid:
+          type: string
+          nullable: true
+          description: SOP Instance UID (unique DICOM identifier)
+          maxLength: 200
+        dicom_metadata:
+          description: Complete DICOM metadata as JSON
+        is_dicom:
+          type: boolean
+          description: True if file is valid DICOM format
+    PatchedHospitalRequest:
+      type: object
+      description: |-
+        Serializer for Hospital model
+        Converts Hospita objects to/from JSON
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        address:
+          type: string
+          minLength: 1
+        contact_email:
+          type: string
+          format: email
+          minLength: 1
+          maxLength: 254
+        contact_phone:
+          type: string
+          minLength: 1
+          maxLength: 20
+    PatchedImagingStudyListRequest:
+      type: object
+      description: Lightweight serializer for imaging study list
+      properties:
+        patient:
+          type: integer
+        study_date:
+          type: string
+          format: date-time
+        modality:
+          $ref: '#/components/schemas/ModalityEnum'
+        body_part:
+          type: string
+          minLength: 1
+          description: e.g. Chest, Lung, Brain
+          maxLength: 100
+        status:
+          $ref: '#/components/schemas/StatusEnum'
+        clinical_notes:
+          type: string
+          description: Reason for study
+        referring_physician:
+          type: string
+          maxLength: 200
+    PatchedPatientListRequest:
+      type: object
+      description: |-
+        Lightweight serializer for patient list view
+        Only includes essential fields for performance
+      properties:
+        medical_record_number:
+          type: string
+          minLength: 1
+          maxLength: 50
+        first_name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        last_name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        date_of_birth:
+          type: string
+          format: date
+        gender:
+          $ref: '#/components/schemas/GenderEnum'
+        phone:
+          type: string
+          maxLength: 20
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        address:
+          type: string
+          maxLength: 500
+        hospital:
+          type: integer
+    PatientDetail:
+      type: object
+      description: |-
+        Detailed serializer for single patient view
+        Includes related data like imaging studies count
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        medical_record_number:
+          type: string
+          maxLength: 50
+        first_name:
+          type: string
+          maxLength: 100
+        last_name:
+          type: string
+          maxLength: 100
+        full_name:
+          type: string
+          readOnly: true
+        date_of_birth:
+          type: string
+          format: date
+        age:
+          type: string
+          readOnly: true
+        gender:
+          $ref: '#/components/schemas/GenderEnum'
+        phone:
+          type: string
+          maxLength: 20
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        address:
+          type: string
+          maxLength: 500
+        hospital:
+          type: integer
+        hospital_name:
+          type: string
+          readOnly: true
+        total_studies:
+          type: string
+          readOnly: true
+        recent_studies:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - age
+      - created_at
+      - date_of_birth
+      - first_name
+      - full_name
+      - gender
+      - hospital
+      - hospital_name
+      - id
+      - last_name
+      - medical_record_number
+      - recent_studies
+      - total_studies
+      - updated_at
+    PatientList:
+      type: object
+      description: |-
+        Lightweight serializer for patient list view
+        Only includes essential fields for performance
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        medical_record_number:
+          type: string
+          maxLength: 50
+        first_name:
+          type: string
+          maxLength: 100
+        last_name:
+          type: string
+          maxLength: 100
+        full_name:
+          type: string
+          readOnly: true
+        date_of_birth:
+          type: string
+          format: date
+        age:
+          type: string
+          readOnly: true
+        gender:
+          $ref: '#/components/schemas/GenderEnum'
+        phone:
+          type: string
+          maxLength: 20
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        address:
+          type: string
+          maxLength: 500
+        hospital:
+          type: integer
+        hospital_name:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - age
+      - created_at
+      - date_of_birth
+      - first_name
+      - full_name
+      - gender
+      - hospital
+      - hospital_name
+      - id
+      - last_name
+      - medical_record_number
+    PatientListRequest:
+      type: object
+      description: |-
+        Lightweight serializer for patient list view
+        Only includes essential fields for performance
+      properties:
+        medical_record_number:
+          type: string
+          minLength: 1
+          maxLength: 50
+        first_name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        last_name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        date_of_birth:
+          type: string
+          format: date
+        gender:
+          $ref: '#/components/schemas/GenderEnum'
+        phone:
+          type: string
+          maxLength: 20
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        address:
+          type: string
+          maxLength: 500
+        hospital:
+          type: integer
+      required:
+      - date_of_birth
+      - first_name
+      - gender
+      - hospital
+      - last_name
+      - medical_record_number
+    SeverityEnum:
+      enum:
+      - normal
+      - minor
+      - moderate
+      - severe
+      type: string
+      description: |-
+        * `normal` - Normal
+        * `minor` - Minor Finding
+        * `moderate` - Moderate Concern
+        * `severe` - Severe - Urgent
+    StatusEnum:
+      enum:
+      - pending
+      - in_progress
+      - completed
+      - archived
+      type: string
+      description: |-
+        * `pending` - Pending Review
+        * `in_progress` - In Progress
+        * `completed` - Completed
+        * `archived` - Archieved
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid
+tags:
+- name: Hospitals
+  description: Hospital and facility management
+- name: Patients
+  description: Patient records and demographics
+- name: Studies
+  description: Imaging studies and scans
+- name: Images
+  description: DICOM image management
+- name: Diagnoses
+  description: Radiological diagnoses
+- name: Statistics
+  description: Analytics and reporting
+- name: Authentication
+  description: User authentication

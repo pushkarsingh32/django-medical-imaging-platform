@@ -3,10 +3,12 @@ from django.shortcuts import render
 # Create your views here.
 from rest_framework import viewsets, permissions, filters, status
 from rest_framework.decorators import action
-from rest_framework. response import Response
+from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
 from django.db.models import Count, Q, Max
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiExample
+from drf_spectacular.types import OpenApiTypes
 
 from .models import Hospital, Patient, ImagingStudy, DicomImage, Diagnosis, AuditLog, ContactMessage
 from .serializers import (
@@ -22,14 +24,51 @@ from .serializers import (
 )
 
 
+@extend_schema_view(
+    list=extend_schema(
+        tags=['Hospitals'],
+        summary='List all hospitals',
+        description='Retrieve a list of all hospitals with optional search and ordering.',
+        parameters=[
+            OpenApiParameter('search', OpenApiTypes.STR, description='Search by hospital name or contact email'),
+            OpenApiParameter('ordering', OpenApiTypes.STR, description='Order by: name, created_at, -name, -created_at'),
+        ]
+    ),
+    create=extend_schema(
+        tags=['Hospitals'],
+        summary='Create a new hospital',
+        description='Register a new hospital in the system.'
+    ),
+    retrieve=extend_schema(
+        tags=['Hospitals'],
+        summary='Get hospital details',
+        description='Retrieve detailed information about a specific hospital including patient count.'
+    ),
+    update=extend_schema(
+        tags=['Hospitals'],
+        summary='Update hospital information',
+        description='Update all fields of a hospital.'
+    ),
+    partial_update=extend_schema(
+        tags=['Hospitals'],
+        summary='Partially update hospital',
+        description='Update specific fields of a hospital.'
+    ),
+    destroy=extend_schema(
+        tags=['Hospitals'],
+        summary='Delete hospital',
+        description='Remove a hospital from the system.'
+    ),
+)
 class HospitalViewSet(viewsets.ModelViewSet):
     """
-    API endpoints for hospitals
-    list: GET /api/hospitals/
-    create: POST /api/hospitals/
-    retrieve: GET /api/hospitals/{id}/
-    update: PUT /api/hospitals/{id}/
-    destroy: DELETE /api/hospital/{id}/
+    ViewSet for managing hospitals and healthcare facilities.
+
+    Provides CRUD operations for hospital management including:
+    - Creating new hospitals
+    - Listing and searching hospitals
+    - Updating hospital information
+    - Deleting hospitals
     """
     queryset = Hospital.objects.all()
     serializer_class = HospitalSerializer
@@ -40,10 +79,54 @@ class HospitalViewSet(viewsets.ModelViewSet):
     ordering = ['name']
 
 
+@extend_schema_view(
+    list=extend_schema(
+        tags=['Patients'],
+        summary='List all patients',
+        description='Retrieve a paginated list of patients with filtering and search capabilities.',
+        parameters=[
+            OpenApiParameter('hospital', OpenApiTypes.INT, description='Filter by hospital ID'),
+            OpenApiParameter('gender', OpenApiTypes.STR, description='Filter by gender (M/F/O)'),
+            OpenApiParameter('search', OpenApiTypes.STR, description='Search by name, medical record number, or email'),
+            OpenApiParameter('ordering', OpenApiTypes.STR, description='Order by: last_name, created_at, date_of_birth (prefix with - for descending)'),
+        ]
+    ),
+    create=extend_schema(
+        tags=['Patients'],
+        summary='Create a new patient',
+        description='Register a new patient in the system with their demographic and medical information.'
+    ),
+    retrieve=extend_schema(
+        tags=['Patients'],
+        summary='Get patient details',
+        description='Retrieve detailed information about a specific patient including all imaging studies.'
+    ),
+    update=extend_schema(
+        tags=['Patients'],
+        summary='Update patient information',
+        description='Update all fields of a patient record.'
+    ),
+    partial_update=extend_schema(
+        tags=['Patients'],
+        summary='Partially update patient',
+        description='Update specific fields of a patient record.'
+    ),
+    destroy=extend_schema(
+        tags=['Patients'],
+        summary='Delete patient',
+        description='Remove a patient from the system.'
+    ),
+)
 class PatientViewSet(viewsets.ModelViewSet):
     """
-    API endpoint for patients
-    Uses different serilizers for list vs details views
+    ViewSet for managing patient records.
+
+    Provides comprehensive patient management including:
+    - Patient demographics and contact information
+    - Medical record tracking
+    - Associated imaging studies
+    - Filtering by hospital and gender
+    - Full-text search across patient fields
     """
     queryset = Patient.objects.select_related('hospital').all()
     permission_classes= [permissions.IsAuthenticated]
@@ -57,7 +140,13 @@ class PatientViewSet(viewsets.ModelViewSet):
         if self.action == 'retrieve':
             return PatientDetailSerializer
         return PatientListSerializer
-    
+
+    @extend_schema(
+        tags=['Patients'],
+        summary='Get patient studies',
+        description='Retrieve all imaging studies for a specific patient.',
+        responses={200: ImagingStudyListSerializer(many=True)}
+    )
     @action(detail=True, methods=['get'])
     def studies(self, request, pk=None):
         """Custom endpoint: GET /api/patients/{id}/studies
@@ -69,9 +158,57 @@ class PatientViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
+@extend_schema_view(
+    list=extend_schema(
+        tags=['Studies'],
+        summary='List all imaging studies',
+        description='Retrieve a paginated list of imaging studies with filtering and search.',
+        parameters=[
+            OpenApiParameter('patient', OpenApiTypes.INT, description='Filter by patient ID'),
+            OpenApiParameter('modality', OpenApiTypes.STR, description='Filter by modality (CT, MRI, XRAY, US, PET, MAMMO)'),
+            OpenApiParameter('status', OpenApiTypes.STR, description='Filter by status (pending, in_progress, completed)'),
+            OpenApiParameter('body_part', OpenApiTypes.STR, description='Filter by body part'),
+            OpenApiParameter('search', OpenApiTypes.STR, description='Search by patient name, MRN, body part, or clinical notes'),
+            OpenApiParameter('ordering', OpenApiTypes.STR, description='Order by: study_date, created_at (prefix with - for descending)'),
+        ]
+    ),
+    create=extend_schema(
+        tags=['Studies'],
+        summary='Create a new imaging study',
+        description='Create a new imaging study for a patient.'
+    ),
+    retrieve=extend_schema(
+        tags=['Studies'],
+        summary='Get study details',
+        description='Retrieve detailed information about a specific study including images and diagnosis.'
+    ),
+    update=extend_schema(
+        tags=['Studies'],
+        summary='Update study information',
+        description='Update all fields of an imaging study.'
+    ),
+    partial_update=extend_schema(
+        tags=['Studies'],
+        summary='Partially update study',
+        description='Update specific fields of an imaging study.'
+    ),
+    destroy=extend_schema(
+        tags=['Studies'],
+        summary='Delete study',
+        description='Remove an imaging study from the system.'
+    ),
+)
 class ImagingStudyViewSet(viewsets.ModelViewSet):
       """
-      API endpoint for imaging studies
+      ViewSet for managing medical imaging studies.
+
+      Provides comprehensive study management including:
+      - CT, MRI, X-Ray, Ultrasound, PET, and Mammography studies
+      - DICOM and standard image support
+      - Study status tracking (pending, in progress, completed)
+      - Associated patient and hospital information
+      - Image upload and management
+      - Radiological diagnosis integration
       """
       queryset = ImagingStudy.objects.select_related('patient',
   'patient__hospital').prefetch_related('images', 'diagnosis').all()
@@ -89,6 +226,12 @@ class ImagingStudyViewSet(viewsets.ModelViewSet):
               return ImagingStudyDetailSerializer
           return ImagingStudyListSerializer
 
+      @extend_schema(
+          tags=['Studies'],
+          summary='Get pending studies',
+          description='Retrieve all studies with pending status awaiting review.',
+          responses={200: ImagingStudyListSerializer(many=True)}
+      )
       @action(detail=False, methods=['get'])
       def pending(self, request):
           """
@@ -99,6 +242,12 @@ class ImagingStudyViewSet(viewsets.ModelViewSet):
           serializer = self.get_serializer(pending_studies, many=True)
           return Response(serializer.data)
 
+      @extend_schema(
+          tags=['Statistics'],
+          summary='Get study statistics',
+          description='Retrieve summary statistics including total studies, status breakdown, and modality distribution.',
+          responses={200: OpenApiTypes.OBJECT}
+      )
       @action(detail=False, methods=['get'])
       def statistics(self, request):
           """
@@ -116,6 +265,12 @@ class ImagingStudyViewSet(viewsets.ModelViewSet):
           }
           return Response(stats)
 
+      @extend_schema(
+          tags=['Diagnoses'],
+          summary='Add diagnosis to study',
+          description='Create a new diagnosis for an imaging study. Study must not already have a diagnosis.',
+          responses={201: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT}
+      )
       @action(detail=True, methods=['post'])
       def diagnosis(self, request, pk=None):
           """
@@ -140,6 +295,43 @@ class ImagingStudyViewSet(viewsets.ModelViewSet):
           print(f"Diagnosis validation errors: {serializer.errors}")
           return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+      @extend_schema(
+          tags=['Images'],
+          summary='Upload images to study',
+          description='Upload multiple DICOM or standard medical images to a study. DICOM files are automatically parsed for metadata. Duplicate DICOM files (same SOP Instance UID) are skipped.',
+          request={
+              'multipart/form-data': {
+                  'type': 'object',
+                  'properties': {
+                      'images': {
+                          'type': 'array',
+                          'items': {'type': 'string', 'format': 'binary'},
+                          'description': 'One or more image files (DICOM or JPEG/PNG)'
+                      }
+                  }
+              }
+          },
+          responses={
+              201: {
+                  'type': 'object',
+                  'properties': {
+                      'message': {'type': 'string'},
+                      'images': {'type': 'array'},
+                      'skipped': {
+                          'type': 'array',
+                          'items': {
+                              'type': 'object',
+                              'properties': {
+                                  'filename': {'type': 'string'},
+                                  'reason': {'type': 'string'},
+                                  'sop_instance_uid': {'type': 'string'}
+                              }
+                          }
+                      }
+                  }
+              }
+          }
+      )
       @action(detail=True, methods=['post'])
       def upload_images(self, request, pk=None):
           """
@@ -277,9 +469,52 @@ class ImagingStudyViewSet(viewsets.ModelViewSet):
           return Response(response_data, status=status.HTTP_201_CREATED)
 
 
+@extend_schema_view(
+    list=extend_schema(
+        tags=['Images'],
+        summary='List all medical images',
+        description='Retrieve a list of DICOM and standard medical images with filtering by study.',
+        parameters=[
+            OpenApiParameter('study', OpenApiTypes.INT, description='Filter by study ID'),
+            OpenApiParameter('ordering', OpenApiTypes.STR, description='Order by: instance_number, uploaded_at (prefix with - for descending)'),
+        ]
+    ),
+    create=extend_schema(
+        tags=['Images'],
+        summary='Upload a single image',
+        description='Upload a single DICOM or standard medical image. For multiple uploads, use the study upload endpoint.'
+    ),
+    retrieve=extend_schema(
+        tags=['Images'],
+        summary='Get image details',
+        description='Retrieve detailed information about a specific medical image including DICOM metadata if available.'
+    ),
+    update=extend_schema(
+        tags=['Images'],
+        summary='Update image metadata',
+        description='Update image metadata and information.'
+    ),
+    partial_update=extend_schema(
+        tags=['Images'],
+        summary='Partially update image',
+        description='Update specific fields of an image.'
+    ),
+    destroy=extend_schema(
+        tags=['Images'],
+        summary='Delete image',
+        description='Remove an image from the system.'
+    ),
+)
 class DicomImageViewSet(viewsets.ModelViewSet):
       """
-      API endpoint for DICOM images
+      ViewSet for managing medical images.
+
+      Supports both DICOM and standard image formats including:
+      - DICOM file parsing with automatic metadata extraction
+      - SOP Instance UID tracking for DICOM compliance
+      - Progressive image loading (thumbnails and full resolution)
+      - Image metadata including window/level, slice location
+      - Equipment and acquisition parameters
       """
       queryset = DicomImage.objects.select_related('study', 'study__patient').all()
       serializer_class = DicomImageSerializer
@@ -297,9 +532,54 @@ class DicomImageViewSet(viewsets.ModelViewSet):
               instance.save()
 
 
+@extend_schema_view(
+    list=extend_schema(
+        tags=['Diagnoses'],
+        summary='List all diagnoses',
+        description='Retrieve a list of radiological diagnoses with filtering and search.',
+        parameters=[
+            OpenApiParameter('severity', OpenApiTypes.STR, description='Filter by severity (low, moderate, high, critical)'),
+            OpenApiParameter('radiologist', OpenApiTypes.INT, description='Filter by radiologist user ID'),
+            OpenApiParameter('search', OpenApiTypes.STR, description='Search by findings, impression, or recommendations'),
+            OpenApiParameter('ordering', OpenApiTypes.STR, description='Order by: diagnosed_at, severity (prefix with - for descending)'),
+        ]
+    ),
+    create=extend_schema(
+        tags=['Diagnoses'],
+        summary='Create a diagnosis',
+        description='Create a new radiological diagnosis for a study. Automatically sets the radiologist to the current user and updates study status to completed.'
+    ),
+    retrieve=extend_schema(
+        tags=['Diagnoses'],
+        summary='Get diagnosis details',
+        description='Retrieve detailed information about a specific diagnosis.'
+    ),
+    update=extend_schema(
+        tags=['Diagnoses'],
+        summary='Update diagnosis',
+        description='Update all fields of a diagnosis.'
+    ),
+    partial_update=extend_schema(
+        tags=['Diagnoses'],
+        summary='Partially update diagnosis',
+        description='Update specific fields of a diagnosis.'
+    ),
+    destroy=extend_schema(
+        tags=['Diagnoses'],
+        summary='Delete diagnosis',
+        description='Remove a diagnosis from the system.'
+    ),
+)
 class DiagnosisViewSet(viewsets.ModelViewSet):
       """
-      API endpoint for diagnoses
+      ViewSet for managing radiological diagnoses.
+
+      Provides diagnosis management including:
+      - Radiological findings and impressions
+      - Severity classification (low, moderate, high, critical)
+      - Treatment recommendations
+      - Automatic study completion tracking
+      - Radiologist attribution
       """
       queryset = Diagnosis.objects.select_related('study', 'study__patient', 'radiologist').all()
       serializer_class = DiagnosisSerializer
@@ -318,12 +598,34 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
           diagnosis.study.save()
 
 
+@extend_schema_view(
+    list=extend_schema(
+        tags=['Audit'],
+        summary='List audit logs',
+        description='Retrieve read-only audit logs for compliance and security tracking.',
+        parameters=[
+            OpenApiParameter('user', OpenApiTypes.INT, description='Filter by user ID'),
+            OpenApiParameter('action', OpenApiTypes.STR, description='Filter by action type'),
+            OpenApiParameter('resource_type', OpenApiTypes.STR, description='Filter by resource type'),
+            OpenApiParameter('search', OpenApiTypes.STR, description='Search by resource type or IP address'),
+            OpenApiParameter('ordering', OpenApiTypes.STR, description='Order by: timestamp (prefix with - for descending)'),
+        ]
+    ),
+    retrieve=extend_schema(
+        tags=['Audit'],
+        summary='Get audit log details',
+        description='Retrieve detailed information about a specific audit log entry.'
+    ),
+)
 class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
       """
-      API endpoint for audit logs (read-only for compliance)
-      
-      list:     GET /api/audit-logs/
-      retrieve: GET /api/audit-logs/{id}/
+      Read-only ViewSet for audit logs.
+
+      Provides compliance and security tracking including:
+      - User actions and timestamps
+      - Resource access tracking
+      - IP address logging
+      - Read-only access for data integrity
       """
       queryset = AuditLog.objects.select_related('user').all()
       serializer_class = AuditLogSerializer
@@ -335,12 +637,29 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
       ordering = ['-timestamp']
 
 
+@extend_schema_view(
+    create=extend_schema(
+        tags=['Contact'],
+        summary='Submit contact form',
+        description='Public endpoint for contact form submissions. No authentication required.',
+        responses={
+            201: {
+                'type': 'object',
+                'properties': {
+                    'success': {'type': 'boolean'},
+                    'message': {'type': 'string'},
+                    'data': {'type': 'object'}
+                }
+            }
+        }
+    ),
+)
 class ContactMessageViewSet(viewsets.ModelViewSet):
     """
-    API endpoint for contact form submissions
-    Publicly accessible (no authentication required)
-    Only allows creating new messages, not viewing/editing
-    No authentication required - public endpoint
+    Public ViewSet for contact form submissions.
+
+    This endpoint allows users to submit contact messages without authentication.
+    Only POST requests are allowed for privacy and security.
     """
     queryset = ContactMessage.objects.all()
     serializer_class = ContactMessageSerializer
@@ -369,6 +688,24 @@ from rest_framework.permissions import AllowAny
 from datetime import timedelta
 
 
+@extend_schema(
+    tags=['Statistics'],
+    summary='Get dashboard statistics',
+    description='Retrieve overall system statistics including patient count, study count, and recent activity metrics.',
+    responses={
+        200: {
+            'type': 'object',
+            'properties': {
+                'total_patients': {'type': 'integer'},
+                'total_studies': {'type': 'integer'},
+                'total_images': {'type': 'integer'},
+                'total_hospitals': {'type': 'integer'},
+                'new_patients_this_month': {'type': 'integer'},
+                'studies_this_week': {'type': 'integer'},
+            }
+        }
+    }
+)
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def dashboard_stats(request):
@@ -389,6 +726,26 @@ def dashboard_stats(request):
     return Response(stats)
 
 
+@extend_schema(
+    tags=['Statistics'],
+    summary='Get study trends',
+    description='Retrieve study count trends over a specified time period.',
+    parameters=[
+        OpenApiParameter('days', OpenApiTypes.INT, description='Number of days to retrieve trends for (default: 30)')
+    ],
+    responses={
+        200: {
+            'type': 'array',
+            'items': {
+                'type': 'object',
+                'properties': {
+                    'date': {'type': 'string', 'format': 'date'},
+                    'count': {'type': 'integer'}
+                }
+            }
+        }
+    }
+)
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def study_trends(request):
@@ -413,6 +770,23 @@ def study_trends(request):
     return Response(trends)
 
 
+@extend_schema(
+    tags=['Statistics'],
+    summary='Get modality distribution',
+    description='Retrieve the distribution of studies by imaging modality.',
+    responses={
+        200: {
+            'type': 'array',
+            'items': {
+                'type': 'object',
+                'properties': {
+                    'modality': {'type': 'string'},
+                    'count': {'type': 'integer'}
+                }
+            }
+        }
+    }
+)
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def modality_distribution(request):
@@ -426,6 +800,31 @@ def modality_distribution(request):
     return Response(list(distribution))
 
 
+@extend_schema(
+    tags=['Statistics'],
+    summary='Get recent activity',
+    description='Retrieve recent study activity with patient and hospital information.',
+    parameters=[
+        OpenApiParameter('limit', OpenApiTypes.INT, description='Number of recent studies to retrieve (default: 10)')
+    ],
+    responses={
+        200: {
+            'type': 'array',
+            'items': {
+                'type': 'object',
+                'properties': {
+                    'id': {'type': 'integer'},
+                    'modality': {'type': 'string'},
+                    'body_part': {'type': 'string'},
+                    'patient_name': {'type': 'string'},
+                    'hospital_name': {'type': 'string'},
+                    'status': {'type': 'string'},
+                    'study_date': {'type': 'string', 'format': 'date-time'}
+                }
+            }
+        }
+    }
+)
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def recent_activity(request):

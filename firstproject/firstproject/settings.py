@@ -41,6 +41,7 @@ INSTALLED_APPS = [
 
     # Third-party apps
     'rest_framework',
+    'drf_spectacular',
     'corsheaders',
     'django_filters',
 
@@ -177,9 +178,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
   # Django REST Framework Settings
 REST_FRAMEWORK = {
+      'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
       'DEFAULT_AUTHENTICATION_CLASSES': [
           'rest_framework.authentication.SessionAuthentication',
-           'rest_framework.authentication.BasicAuthentication', 
+           'rest_framework.authentication.BasicAuthentication',
       ],
       'DEFAULT_PERMISSION_CLASSES': [
         #   'rest_framework.permissions.IsAuthenticatedOrReadOnly',
@@ -312,3 +314,57 @@ else:
       # Local storage (development fallback)
       MEDIA_URL = '/media/'
       MEDIA_ROOT = BASE_DIR/ 'media'
+# DRF Spectacular Settings (API Documentation)
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Medical Imaging Platform API',
+    'DESCRIPTION': '''
+    A comprehensive medical imaging management system with DICOM support.
+    
+    This API provides endpoints for managing:
+    - Hospitals and healthcare facilities
+    - Patients and medical records
+    - Imaging studies (CT, MRI, X-Ray, Ultrasound)
+    - DICOM image files with metadata
+    - Radiological diagnoses
+    
+    Features:
+    - DICOM standard compliance
+    - Progressive image loading
+    - Redis-based caching
+    - Advanced filtering and search
+    - Real-time statistics
+    ''',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'CONTACT': {
+        'name': 'Medical Imaging Platform',
+        'email': 'support@medicalimaging.example.com',
+    },
+    'LICENSE': {
+        'name': 'MIT License',
+    },
+    'TAGS': [
+        {'name': 'Hospitals', 'description': 'Hospital and facility management'},
+        {'name': 'Patients', 'description': 'Patient records and demographics'},
+        {'name': 'Studies', 'description': 'Imaging studies and scans'},
+        {'name': 'Images', 'description': 'DICOM image management'},
+        {'name': 'Diagnoses', 'description': 'Radiological diagnoses'},
+        {'name': 'Statistics', 'description': 'Analytics and reporting'},
+        {'name': 'Authentication', 'description': 'User authentication'},
+    ],
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SORT_OPERATIONS': True,
+    'SERVE_AUTHENTICATION': ['rest_framework.authentication.SessionAuthentication'],
+    'SERVE_PERMISSIONS': ['rest_framework.permissions.AllowAny'],
+    'SWAGGER_UI_SETTINGS': {
+        'deepLinking': True,
+        'persistAuthorization': True,
+        'displayOperationId': True,
+        'filter': True,
+    },
+    'REDOC_UI_SETTINGS': {
+        'hideDownloadButton': False,
+        'expandResponses': '200,201',
+        'pathInMiddlePanel': True,
+    },
+}
