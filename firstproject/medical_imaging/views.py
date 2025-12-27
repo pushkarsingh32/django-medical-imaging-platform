@@ -21,7 +21,8 @@ from .serializers import (
     DiagnosisSerializer,
     AuditLogSerializer,
     ContactMessageSerializer,
-    TaskStatusSerializer
+    TaskStatusSerializer,
+    PatientReportSerializer
 )
 
 
@@ -186,6 +187,23 @@ class PatientViewSet(viewsets.ModelViewSet):
             'patient_name': patient.full_name,
             'status': 'processing'
         }, status=status.HTTP_202_ACCEPTED)
+
+    @extend_schema(
+        tags=['Patients'],
+        summary='Get patient reports',
+        description='Retrieve all generated PDF reports for a patient.',
+        responses={200: PatientReportSerializer(many=True)}
+    )
+    @action(detail=True, methods=['get'])
+    def reports(self, request, pk=None):
+        """
+        Custom endpoint: GET /api/patients/{id}/reports/
+        Returns all generated PDF reports for this patient
+        """
+        patient = self.get_object()
+        reports = patient.reports.all()
+        serializer = PatientReportSerializer(reports, many=True)
+        return Response(serializer.data)
 
 
 @extend_schema_view(

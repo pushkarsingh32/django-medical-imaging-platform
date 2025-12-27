@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Hospital, Patient, ImagingStudy, DicomImage, Diagnosis, AuditLog, ContactMessage, TaskStatus
+from .models import Hospital, Patient, ImagingStudy, DicomImage, Diagnosis, AuditLog, ContactMessage, TaskStatus, PatientReport
 # Register your models here.
 
 @admin.register(Hospital)
@@ -169,4 +169,28 @@ class TaskStatusAdmin(admin.ModelAdmin):
 
     def has_add_permission(self, request):
         # Tasks are created automatically by Celery
+        return False
+
+
+@admin.register(PatientReport)
+class PatientReportAdmin(admin.ModelAdmin):
+    list_display = ['id', 'patient', 'filename', 'file_size_mb', 'studies_count', 'generated_by', 'generated_at']
+    search_fields = ['patient__first_name', 'patient__last_name', 'patient__medical_record_number', 'filename']
+    list_filter = ['generated_at', 'studies_count']
+    readonly_fields = ['patient', 'generated_by', 'file_size', 'filename', 'studies_count', 'generated_at', 'task_id', 'file_url']
+
+    fieldsets = (
+        ('Report Information', {
+            'fields': ('patient', 'filename', 'file_url')
+        }),
+        ('File Details', {
+            'fields': ('pdf_file', 'file_size', 'studies_count')
+        }),
+        ('Generation Details', {
+            'fields': ('generated_by', 'generated_at', 'task_id')
+        }),
+    )
+
+    def has_add_permission(self, request):
+        # Reports are generated automatically
         return False

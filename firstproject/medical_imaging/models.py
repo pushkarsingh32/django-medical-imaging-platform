@@ -388,3 +388,68 @@ class TaskStatus(models.Model):
         if self.total_items == 0:
             return 0
         return int((self.processed_items / self.total_items) * 100)
+
+
+class PatientReport(models.Model):
+    """
+    Track generated PDF reports for patients
+    Keeps history of all reports with download links
+    """
+    patient = models.ForeignKey(
+        Patient,
+        on_delete=models.CASCADE,
+        related_name='reports'
+    )
+    generated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='generated_reports'
+    )
+    pdf_file = models.FileField(
+        upload_to='patient_reports/',
+        help_text='PDF report file'
+    )
+    file_size = models.IntegerField(
+        default=0,
+        help_text='File size in bytes'
+    )
+    filename = models.CharField(
+        max_length=255,
+        help_text='Original filename'
+    )
+    studies_count = models.IntegerField(
+        default=0,
+        help_text='Number of studies included in this report'
+    )
+    generated_at = models.DateTimeField(auto_now_add=True)
+    task_id = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text='Celery task ID that generated this report'
+    )
+
+    class Meta:
+        ordering = ['-generated_at']
+        verbose_name = 'Patient Report'
+        verbose_name_plural = 'Patient Reports'
+        indexes = [
+            models.Index(fields=['patient', '-generated_at']),
+            models.Index(fields=['generated_by', '-generated_at']),
+        ]
+
+    def __str__(self):
+        return f"Report for {self.patient.full_name} - {self.generated_at.strftime('%Y-%m-%d %H:%M')}"
+
+    @property
+    def file_url(self):
+        """Get public URL for the PDF file"""
+        if self.pdf_file:
+            return self.pdf_file.url
+        return None
+
+    @property
+    def file_size_mb(self):
+        """Get file size in MB"""
+        return round(self.file_size / (1024 * 1024), 2)

@@ -8,7 +8,7 @@ import tempfile
 import os
 import logging
 
-from .models import ImagingStudy, DicomImage, TaskStatus, Patient
+from .models import ImagingStudy, DicomImage, TaskStatus, Patient, PatientReport
 from .dicom_service import DicomParsingService
 from .pdf_service import PatientReportGenerator
 from django.core.files.storage import default_storage
@@ -253,6 +253,22 @@ def generate_patient_report_async(self, patient_id, user_id=None):
 
         logger.info(f"PDF saved to: {saved_path}")
 
+        # Get studies count
+        studies_count = patient.imaging_studies.count()
+
+        # Create PatientReport record
+        report = PatientReport.objects.create(
+            patient=patient,
+            generated_by_id=user_id,
+            pdf_file=saved_path,
+            file_size=len(pdf_bytes),
+            filename=f"patient_{patient.medical_record_number}_report.pdf",
+            studies_count=studies_count,
+            task_id=task_id,
+        )
+
+        logger.info(f"PatientReport record created: ID {report.id}")
+
         # Update task status
         task_status.processed_items = 1
         task_status.status = 'completed'
@@ -260,12 +276,14 @@ def generate_patient_report_async(self, patient_id, user_id=None):
             'pdf_url': pdf_url,
             'filename': f"patient_{patient.medical_record_number}_report.pdf",
             'file_size': len(pdf_bytes),
+            'report_id': report.id,
         }
         task_status.save()
 
         return {
             'pdf_url': pdf_url,
             'filename': f"patient_{patient.medical_record_number}_report.pdf",
+            'report_id': report.id,
             'task_id': task_id,
         }
 

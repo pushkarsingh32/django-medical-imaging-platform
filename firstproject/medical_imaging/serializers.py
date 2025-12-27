@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Hospital, Patient, ImagingStudy, DicomImage, Diagnosis, AuditLog, ContactMessage, TaskStatus
+from .models import Hospital, Patient, ImagingStudy, DicomImage, Diagnosis, AuditLog, ContactMessage, TaskStatus, PatientReport
 from django.contrib.auth.models import User
 
 class HospitalSerializer(serializers.ModelSerializer):
@@ -230,4 +230,27 @@ class TaskStatusSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             'id', 'task_id', 'created_at', 'updated_at', 'progress_percentage'
+        ]
+
+
+class PatientReportSerializer(serializers.ModelSerializer):
+    """
+    Serializer for PatientReport model
+    Tracks generated PDF reports
+    """
+    generated_by_name = serializers.CharField(source='generated_by.get_full_name', read_only=True)
+    patient_name = serializers.CharField(source='patient.full_name', read_only=True)
+    file_url = serializers.ReadOnlyField()
+    file_size_mb = serializers.ReadOnlyField()
+
+    class Meta:
+        model = PatientReport
+        fields = [
+            'id', 'patient', 'patient_name', 'generated_by', 'generated_by_name',
+            'pdf_file', 'file_url', 'file_size', 'file_size_mb', 'filename',
+            'studies_count', 'generated_at', 'task_id'
+        ]
+        read_only_fields = [
+            'id', 'patient', 'generated_by', 'file_size', 'filename',
+            'studies_count', 'generated_at', 'task_id'
         ]
