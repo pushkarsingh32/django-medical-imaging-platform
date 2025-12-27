@@ -5,6 +5,7 @@ import {
   PaginatedResponse,
   StudyQueryParams,
   StudyStatistics,
+  UploadResponse,
 } from '../types';
 
 export const studyService = {
@@ -76,7 +77,7 @@ export const studyService = {
   /**
    * Upload images to a study
    */
-  uploadImages: (studyId: number, formData: FormData) => {
+  uploadImages: (studyId: number, formData: FormData): Promise<UploadResponse> => {
     return apiClient.post(`/studies/${studyId}/upload_images/`, formData);
   },
 };

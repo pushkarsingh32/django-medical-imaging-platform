@@ -179,3 +179,14 @@ export interface StudyQueryParams {
   status?: string;
   page?: number;
 }
+
+// Upload response
+export interface UploadResponse {
+  message: string;
+  images?: DicomImage[];
+  skipped?: {
+    filename: string;
+    reason: string;
+    sop_instance_uid?: string;
+  }[];
+}

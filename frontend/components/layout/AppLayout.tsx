@@ -84,14 +84,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   key={item.name}
                   href={item.href}
                   onClick={() => setSidebarOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors select-none ${
+                  className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors select-none ${
                     active
                       ? 'bg-primary text-primary-foreground'
                       : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                   }`}
                 >
-                  <Icon className="h-5 w-5" />
-                  <span className="font-medium">{item.name}</span>
+                  <Icon className="h-4 w-4" />
+                  <span className="text-sm font-medium">{item.name}</span>
                 </Link>
               );
             })}
