@@ -353,35 +353,12 @@ export default function PatientDetailPage() {
                           </Button>
                           <Button
                             size="sm"
-                            onClick={async () => {
-                              try {
-                                // Fetch the PDF as a blob
-                                const response = await fetch(report.file_url);
-                                const blob = await response.blob();
-
-                                // Create a blob URL
-                                const blobUrl = window.URL.createObjectURL(blob);
-
-                                // Create temporary link and trigger download
-                                const link = document.createElement('a');
-                                link.href = blobUrl;
-                                link.download = report.filename;
-                                document.body.appendChild(link);
-                                link.click();
-                                document.body.removeChild(link);
-
-                                // Cleanup blob URL
-                                window.URL.revokeObjectURL(blobUrl);
-
-                                toast.success('Download started!');
-                              } catch (error) {
-                                console.error('Download error:', error);
-                                toast.error('Failed to download PDF');
-                              }
-                            }}
+                            asChild
                           >
-                            <Download className="h-4 w-4 mr-1" />
-                            Download
+                            <a href={report.file_url} download={report.filename}>
+                              <Download className="h-4 w-4 mr-1" />
+                              Download
+                            </a>
                           </Button>
                         </TableCell>
                       </TableRow>
