@@ -229,8 +229,8 @@ def generate_patient_report_async(self, patient_id, user_id=None):
         task_status.save()
 
     try:
-        # Get patient
-        patient = Patient.objects.get(id=patient_id)
+        # Get patient with hospital relationship
+        patient = Patient.objects.select_related('hospital').get(id=patient_id)
         logger.info(f"Generating PDF report for patient {patient.medical_record_number}")
 
         # Update progress

@@ -205,6 +205,32 @@ class PatientViewSet(viewsets.ModelViewSet):
         serializer = PatientReportSerializer(reports, many=True)
         return Response(serializer.data)
 
+    @extend_schema(
+        tags=['Patients'],
+        summary='Download patient report',
+        description='Download a specific PDF report with proper Content-Disposition header.',
+        responses={200: OpenApiTypes.BINARY}
+    )
+    @action(detail=True, methods=['get'], url_path='reports/(?P<report_id>[^/.]+)/download')
+    def download_report(self, request, pk=None, report_id=None):
+        """
+        Custom endpoint: GET /api/patients/{id}/reports/{report_id}/download/
+        Download a PDF report with forced download headers
+        """
+        from django.http import FileResponse
+        from .models import PatientReport
+
+        patient = self.get_object()
+        try:
+            report = PatientReport.objects.get(id=report_id, patient=patient)
+        except PatientReport.DoesNotExist:
+            return Response({'error': 'Report not found'}, status=404)
+
+        # Open the file and return as attachment (force download)
+        response = FileResponse(report.pdf_file.open('rb'), content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{report.filename}"'
+        return response
+
 
 @extend_schema_view(
     list=extend_schema(
