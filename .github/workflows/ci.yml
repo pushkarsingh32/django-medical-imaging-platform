@@ -109,6 +109,18 @@ jobs:
         working-directory: ./frontend
         run: npm run lint || true
 
+      - name: Run Jest tests
+        working-directory: ./frontend
+        run: npm test -- --coverage --passWithNoTests
+
+      - name: Upload frontend coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./frontend/coverage/coverage-final.json
+          flags: frontend
+          name: frontend-coverage
+        continue-on-error: true
+
       - name: Build frontend
         working-directory: ./frontend
         env:
