@@ -183,10 +183,28 @@ export interface StudyQueryParams {
 // Upload response
 export interface UploadResponse {
   message: string;
-  images?: DicomImage[];
-  skipped?: {
-    filename: string;
-    reason: string;
-    sop_instance_uid?: string;
-  }[];
+  task_id: string;
+  total_files: number;
+  status: 'processing';
+}
+
+export interface TaskStatus {
+  id: number;
+  task_id: string;
+  task_name: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  created_at: string;
+  updated_at: string;
+  total_items: number;
+  processed_items: number;
+  failed_items: number;
+  progress_percentage: number;
+  result: {
+    created: number;
+    skipped: number;
+    errors: number;
+  } | null;
+  error_message: string;
+  study: number;
+  user: number | null;
 }

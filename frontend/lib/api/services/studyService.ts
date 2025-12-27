@@ -6,6 +6,7 @@ import {
   StudyQueryParams,
   StudyStatistics,
   UploadResponse,
+  TaskStatus,
 } from '../types';
 
 export const studyService = {
@@ -75,9 +76,16 @@ export const studyService = {
   },
 
   /**
-   * Upload images to a study
+   * Upload images to a study (async with Celery)
    */
   uploadImages: (studyId: number, formData: FormData): Promise<UploadResponse> => {
     return apiClient.post(`/studies/${studyId}/upload_images/`, formData);
+  },
+
+  /**
+   * Get task status by task_id
+   */
+  getTaskStatus: (taskId: string): Promise<TaskStatus> => {
+    return apiClient.get(`/tasks/${taskId}/`);
   },
 };

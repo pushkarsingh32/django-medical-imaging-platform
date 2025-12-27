@@ -45,6 +45,8 @@ export default function StudyDetailPage() {
   });
   const [selectedImage, setSelectedImage] = useState<any>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadTaskId, setUploadTaskId] = useState<string | null>(null);
 
   const handleEditDiagnosis = () => {
     if (study?.diagnosis) {
@@ -99,6 +101,7 @@ export default function StudyDetailPage() {
     if (!files || files.length === 0) return;
 
     setIsUploading(true);
+    setUploadProgress(0);
     const formData = new FormData();
 
     Array.from(files).forEach((file) => {
@@ -106,31 +109,76 @@ export default function StudyDetailPage() {
     });
 
     try {
+      // Upload and get task_id
       const response = await studyService.uploadImages(studyId, formData);
-      // Refresh images
-      queryClient.invalidateQueries({ queryKey: studyKeys.images(studyId) });
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
+      setUploadTaskId(response.task_id);
 
-      // Show appropriate message based on response
-      if (response.skipped && response.skipped.length > 0) {
-        // Some files were skipped (duplicates)
-        if (response.images && response.images.length > 0) {
-          toast.success(response.message || `${response.images.length} image(s) uploaded, ${response.skipped.length} skipped (duplicates)`);
-        } else {
-          toast.warning(response.message || `All ${response.skipped.length} image(s) skipped (duplicates already exist)`);
+      toast.info(`Processing ${response.total_files} image(s) in background...`);
+
+      // Poll for task status
+      const pollInterval = setInterval(async () => {
+        try {
+          const taskStatus = await studyService.getTaskStatus(response.task_id);
+          setUploadProgress(taskStatus.progress_percentage);
+
+          if (taskStatus.status === 'completed') {
+            clearInterval(pollInterval);
+            setIsUploading(false);
+            setUploadTaskId(null);
+            setUploadProgress(0);
+
+            // Refresh images
+            queryClient.invalidateQueries({ queryKey: studyKeys.images(studyId) });
+
+            // Reset file input
+            if (fileInputRef.current) {
+              fileInputRef.current.value = '';
+            }
+
+            // Show result
+            if (taskStatus.result) {
+              const { created, skipped, errors } = taskStatus.result;
+              if (created > 0 && skipped > 0) {
+                toast.success(`${created} image(s) uploaded, ${skipped} skipped (duplicates)`);
+              } else if (created > 0) {
+                toast.success(`${created} image(s) uploaded successfully!`);
+              } else if (skipped > 0) {
+                toast.warning(`All ${skipped} image(s) skipped (duplicates already exist)`);
+              } else if (errors > 0) {
+                toast.error(`${errors} image(s) failed to process`);
+              }
+            } else {
+              toast.success('Upload completed!');
+            }
+          } else if (taskStatus.status === 'failed') {
+            clearInterval(pollInterval);
+            setIsUploading(false);
+            setUploadTaskId(null);
+            setUploadProgress(0);
+            toast.error(taskStatus.error_message || 'Failed to process images. Please try again.');
+          }
+        } catch (pollError) {
+          console.error('Poll error:', pollError);
+          // Continue polling despite errors
         }
-      } else {
-        // All images uploaded successfully
-        toast.success(response.message || `${response.images?.length || files.length} image(s) uploaded successfully!`);
-      }
+      }, 2000); // Poll every 2 seconds
+
+      // Timeout after 5 minutes
+      setTimeout(() => {
+        clearInterval(pollInterval);
+        if (isUploading) {
+          setIsUploading(false);
+          setUploadTaskId(null);
+          toast.error('Upload timeout. Please refresh the page.');
+        }
+      }, 5 * 60 * 1000);
+
     } catch (error) {
       console.error('Upload error:', error);
       toast.error('Failed to upload images. Please try again.');
-    } finally {
       setIsUploading(false);
+      setUploadProgress(0);
+      setUploadTaskId(null);
     }
   };
 
@@ -444,10 +492,13 @@ export default function StudyDetailPage() {
                   size="sm"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isUploading}
-                  title="Upload more images"
+                  title={isUploading ? `Processing... ${uploadProgress}%` : "Upload more images"}
                 >
                   {isUploading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                      {uploadProgress}%
+                    </>
                   ) : (
                     <Upload className="h-4 w-4" />
                   )}
@@ -496,7 +547,7 @@ export default function StudyDetailPage() {
                   {isUploading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Uploading...
+                      Processing... {uploadProgress}%
                     </>
                   ) : (
                     <>
@@ -505,6 +556,14 @@ export default function StudyDetailPage() {
                     </>
                   )}
                 </Button>
+                {isUploading && uploadProgress > 0 && (
+                  <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                    <div
+                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
