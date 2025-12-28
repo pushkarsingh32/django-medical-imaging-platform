@@ -3,6 +3,7 @@ AI Chat API View with OpenAI integration and streaming support.
 """
 import json
 import os
+import logging
 from django.http import StreamingHttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -16,6 +17,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import SessionAuthentication
 from .throttling import AIQueryRateThrottle
 from .ai_tools import TOOLS, TOOL_HANDLERS
+
+logger = logging.getLogger(__name__)
 
 
 class CsrfExemptSessionAuthentication(SessionAuthentication):
@@ -48,6 +51,84 @@ Always be helpful and provide context with your answers.
 """
 
 
+# ============================================================================
+# Helper Functions (DRY)
+# ============================================================================
+
+def get_openai_client():
+    """
+    Get configured OpenAI client instance.
+    Centralizes API key retrieval and validation.
+
+    Returns:
+        OpenAI: Configured client instance
+
+    Raises:
+        ValueError: If API key is not configured
+    """
+    api_key = config('OPENAI_API_KEY', default=None)
+    if not api_key or api_key == 'your-openai-api-key-here':
+        raise ValueError('OpenAI API key not configured')
+    return OpenAI(api_key=api_key)
+
+
+def parse_chat_request(request):
+    """
+    Parse and validate chat request body.
+
+    Args:
+        request: Django request object
+
+    Returns:
+        tuple: (user_message, history) if valid
+        JsonResponse: Error response if invalid
+    """
+    try:
+        data = json.loads(request.body)
+        user_message = data.get('message', '').strip()
+        history = data.get('history', [])
+
+        if not user_message:
+            return None, JsonResponse(
+                {'error': 'Message is required'},
+                status=400
+            )
+
+        return (user_message, history), None
+
+    except json.JSONDecodeError:
+        return None, JsonResponse(
+            {'error': 'Invalid JSON in request body'},
+            status=400
+        )
+
+
+def build_messages(user_message, history):
+    """
+    Build OpenAI messages array from user message and history.
+
+    Args:
+        user_message: Current user message
+        history: Previous conversation messages
+
+    Returns:
+        list: Messages array for OpenAI API
+    """
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT}
+    ]
+
+    if history:
+        messages.extend(history)
+
+    messages.append({
+        "role": "user",
+        "content": user_message
+    })
+
+    return messages
+
+
 @api_view(['POST'])
 @authentication_classes([CsrfExemptSessionAuthentication])
 @permission_classes([IsAuthenticated])
@@ -63,163 +144,145 @@ def chat_stream(request):
     }
     """
     # Debug logging
-    import logging
-    logger = logging.getLogger(__name__)
     logger.info(f"Chat stream request - User: {request.user}, Authenticated: {request.user.is_authenticated}")
     logger.info(f"Session key: {request.session.session_key}")
     logger.info(f"Cookies: {request.COOKIES.keys()}")
 
+    # Parse and validate request
+    result, error_response = parse_chat_request(request)
+    if error_response:
+        return error_response
+
+    user_message, history = result
+
+    # Get OpenAI client
     try:
-        data = json.loads(request.body)
-        user_message = data.get('message', '').strip()
-        history = data.get('history', [])
+        client = get_openai_client()
+    except ValueError as e:
+        return JsonResponse(
+            {'error': str(e)},
+            status=500
+        )
 
-        if not user_message:
-            return JsonResponse(
-                {'error': 'Message is required'},
-                status=400
+    # Build messages
+    messages = build_messages(user_message, history)
+
+    # Generator function for streaming
+    def generate():
+        max_iterations = 10
+        current_iteration = 0
+
+        while current_iteration < max_iterations:
+            current_iteration += 1
+
+            # Stream completion from OpenAI
+            stream = client.chat.completions.create(
+                model="gpt-4-turbo-preview",
+                messages=messages,
+                tools=TOOLS,
+                stream=True,
             )
 
-        # Get OpenAI API key from environment
-        api_key = config('OPENAI_API_KEY', default=None)
-        if not api_key or api_key == 'your-openai-api-key-here':
-            return JsonResponse(
-                {'error': 'OpenAI API key not configured'},
-                status=500
-            )
+            # Variables to collect tool calls
+            tool_calls = []
+            current_tool_call = None
+            assistant_message = {"role": "assistant", "content": ""}
+            finish_reason = None
 
-        client = OpenAI(api_key=api_key)
+            # Process the stream
+            for chunk in stream:
+                delta = chunk.choices[0].delta
+                finish_reason = chunk.choices[0].finish_reason
 
-        # Build messages array
-        messages = [
-            {"role": "system", "content": SYSTEM_PROMPT}
-        ]
+                # Handle content (text response)
+                if delta.content:
+                    assistant_message["content"] += delta.content
+                    # Send content chunk to client
+                    yield f"data: {json.dumps({'type': 'content', 'content': delta.content})}\n\n"
 
-        # Add history if provided
-        if history:
-            messages.extend(history)
+                # Handle tool calls
+                if delta.tool_calls:
+                    for tool_call_delta in delta.tool_calls:
+                        if tool_call_delta.index is not None:
+                            # Ensure we have a tool_call object at this index
+                            while len(tool_calls) <= tool_call_delta.index:
+                                tool_calls.append({
+                                    "id": "",
+                                    "type": "function",
+                                    "function": {"name": "", "arguments": ""}
+                                })
 
-        # Add current user message
-        messages.append({
-            "role": "user",
-            "content": user_message
-        })
+                            current_tool_call = tool_calls[tool_call_delta.index]
 
-        # Generator function for streaming
-        def generate():
-            max_iterations = 10
-            current_iteration = 0
+                            if tool_call_delta.id:
+                                current_tool_call["id"] = tool_call_delta.id
 
-            while current_iteration < max_iterations:
-                current_iteration += 1
+                            if tool_call_delta.function:
+                                if tool_call_delta.function.name:
+                                    current_tool_call["function"]["name"] = tool_call_delta.function.name
+                                if tool_call_delta.function.arguments:
+                                    current_tool_call["function"]["arguments"] += tool_call_delta.function.arguments
 
-                # Stream completion from OpenAI
-                stream = client.chat.completions.create(
-                    model="gpt-4-turbo-preview",
-                    messages=messages,
-                    tools=TOOLS,
-                    stream=True,
-                )
+            # If we have content, send it
+            if assistant_message["content"]:
+                messages.append(assistant_message)
 
-                # Variables to collect tool calls
-                tool_calls = []
-                current_tool_call = None
-                assistant_message = {"role": "assistant", "content": ""}
-                finish_reason = None
-
-                # Process the stream
-                for chunk in stream:
-                    delta = chunk.choices[0].delta
-                    finish_reason = chunk.choices[0].finish_reason
-
-                    # Handle content (text response)
-                    if delta.content:
-                        assistant_message["content"] += delta.content
-                        # Send content chunk to client
-                        yield f"data: {json.dumps({'type': 'content', 'content': delta.content})}\n\n"
-
-                    # Handle tool calls
-                    if delta.tool_calls:
-                        for tool_call_delta in delta.tool_calls:
-                            if tool_call_delta.index is not None:
-                                # Ensure we have a tool_call object at this index
-                                while len(tool_calls) <= tool_call_delta.index:
-                                    tool_calls.append({
-                                        "id": "",
-                                        "type": "function",
-                                        "function": {"name": "", "arguments": ""}
-                                    })
-
-                                current_tool_call = tool_calls[tool_call_delta.index]
-
-                                if tool_call_delta.id:
-                                    current_tool_call["id"] = tool_call_delta.id
-
-                                if tool_call_delta.function:
-                                    if tool_call_delta.function.name:
-                                        current_tool_call["function"]["name"] = tool_call_delta.function.name
-                                    if tool_call_delta.function.arguments:
-                                        current_tool_call["function"]["arguments"] += tool_call_delta.function.arguments
-
-                # If we have content, send it
-                if assistant_message["content"]:
-                    messages.append(assistant_message)
-
-                    # If finish_reason is 'stop', we're done
-                    if finish_reason == "stop":
-                        yield f"data: {json.dumps({'type': 'done'})}\n\n"
-                        return
-
-                # If we have tool calls, execute them
-                if tool_calls and finish_reason == "tool_calls":
-                    # Add assistant message with tool calls
-                    assistant_tool_message = {
-                        "role": "assistant",
-                        "content": None,
-                        "tool_calls": tool_calls
-                    }
-                    messages.append(assistant_tool_message)
-
-                    # Execute each tool call
-                    for tool_call in tool_calls:
-                        function_name = tool_call["function"]["name"]
-                        function_args = json.loads(tool_call["function"]["arguments"])
-
-                        # Send tool call info to client
-                        yield f"data: {json.dumps({'type': 'tool_call', 'name': function_name, 'args': function_args})}\n\n"
-
-                        # Execute the tool
-                        try:
-                            handler = TOOL_HANDLERS.get(function_name)
-                            if handler:
-                                tool_output = handler(function_args)
-                            else:
-                                tool_output = {"error": f"Unknown tool: {function_name}"}
-                        except Exception as e:
-                            tool_output = {"error": f"Tool execution error: {str(e)}"}
-
-                        # Send tool output to client
-                        yield f"data: {json.dumps({'type': 'tool_output', 'name': function_name, 'output': tool_output})}\n\n"
-
-                        # Add tool response to messages
-                        messages.append({
-                            "role": "tool",
-                            "tool_call_id": tool_call["id"],
-                            "content": json.dumps(tool_output)
-                        })
-
-                    # Continue loop to get next response
-                    continue
-
-                # If we got here with stop, we're done
+                # If finish_reason is 'stop', we're done
                 if finish_reason == "stop":
                     yield f"data: {json.dumps({'type': 'done'})}\n\n"
                     return
 
-            # Max iterations reached
-            yield f"data: {json.dumps({'type': 'error', 'message': 'Max iterations reached'})}\n\n"
+            # If we have tool calls, execute them
+            if tool_calls and finish_reason == "tool_calls":
+                # Add assistant message with tool calls
+                assistant_tool_message = {
+                    "role": "assistant",
+                    "content": None,
+                    "tool_calls": tool_calls
+                }
+                messages.append(assistant_tool_message)
 
-        # Return streaming response
+                # Execute each tool call
+                for tool_call in tool_calls:
+                    function_name = tool_call["function"]["name"]
+                    function_args = json.loads(tool_call["function"]["arguments"])
+
+                    # Send tool call info to client
+                    yield f"data: {json.dumps({'type': 'tool_call', 'name': function_name, 'args': function_args})}\n\n"
+
+                    # Execute the tool
+                    try:
+                        handler = TOOL_HANDLERS.get(function_name)
+                        if handler:
+                            tool_output = handler(function_args)
+                        else:
+                            tool_output = {"error": f"Unknown tool: {function_name}"}
+                    except Exception as e:
+                        tool_output = {"error": f"Tool execution error: {str(e)}"}
+
+                    # Send tool output to client
+                    yield f"data: {json.dumps({'type': 'tool_output', 'name': function_name, 'output': tool_output})}\n\n"
+
+                    # Add tool response to messages
+                    messages.append({
+                        "role": "tool",
+                        "tool_call_id": tool_call["id"],
+                        "content": json.dumps(tool_output)
+                    })
+
+                # Continue loop to get next response
+                continue
+
+            # If we got here with stop, we're done
+            if finish_reason == "stop":
+                yield f"data: {json.dumps({'type': 'done'})}\n\n"
+                return
+
+        # Max iterations reached
+        yield f"data: {json.dumps({'type': 'error', 'message': 'Max iterations reached'})}\n\n"
+
+    # Return streaming response
+    try:
         response = StreamingHttpResponse(
             generate(),
             content_type='text/event-stream'
@@ -227,13 +290,8 @@ def chat_stream(request):
         response['Cache-Control'] = 'no-cache'
         response['X-Accel-Buffering'] = 'no'
         return response
-
-    except json.JSONDecodeError:
-        return JsonResponse(
-            {'error': 'Invalid JSON in request body'},
-            status=400
-        )
     except Exception as e:
+        logger.error(f"Stream error: {str(e)}")
         return JsonResponse(
             {'error': f'Server error: {str(e)}'},
             status=500
@@ -254,46 +312,30 @@ def chat(request):
         "history": [...]  // Optional previous messages
     }
     """
+    # Parse and validate request
+    result, error_response = parse_chat_request(request)
+    if error_response:
+        return error_response
+
+    user_message, history = result
+
+    # Get OpenAI client
     try:
-        data = json.loads(request.body)
-        user_message = data.get('message', '').strip()
-        history = data.get('history', [])
+        client = get_openai_client()
+    except ValueError as e:
+        return JsonResponse(
+            {'error': str(e)},
+            status=500
+        )
 
-        if not user_message:
-            return JsonResponse(
-                {'error': 'Message is required'},
-                status=400
-            )
+    # Build messages
+    messages = build_messages(user_message, history)
 
-        # Get OpenAI API key from environment
-        api_key = config('OPENAI_API_KEY', default=None)
-        if not api_key or api_key == 'your-openai-api-key-here':
-            return JsonResponse(
-                {'error': 'OpenAI API key not configured'},
-                status=500
-            )
+    # Circuit breaker
+    max_iterations = 10
+    current_iteration = 0
 
-        client = OpenAI(api_key=api_key)
-
-        # Build messages array
-        messages = [
-            {"role": "system", "content": SYSTEM_PROMPT}
-        ]
-
-        # Add history if provided
-        if history:
-            messages.extend(history)
-
-        # Add current user message
-        messages.append({
-            "role": "user",
-            "content": user_message
-        })
-
-        # Circuit breaker
-        max_iterations = 10
-        current_iteration = 0
-
+    try:
         while current_iteration < max_iterations:
             current_iteration += 1
 
@@ -354,13 +396,8 @@ def chat(request):
             {'error': 'Max iterations reached without final response'},
             status=500
         )
-
-    except json.JSONDecodeError:
-        return JsonResponse(
-            {'error': 'Invalid JSON in request body'},
-            status=400
-        )
     except Exception as e:
+        logger.error(f"Chat error: {str(e)}")
         return JsonResponse(
             {'error': f'Server error: {str(e)}'},
             status=500
