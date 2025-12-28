@@ -21,6 +21,15 @@ from .ai_tools import TOOLS, TOOL_HANDLERS
 logger = logging.getLogger(__name__)
 
 
+# ============================================================================
+# Configuration
+# ============================================================================
+
+# OpenAI model to use for chat completions
+# Can be overridden via environment variable OPENAI_MODEL
+OPENAI_MODEL = config('OPENAI_MODEL', default='gpt-4-turbo-preview')
+
+
 class CsrfExemptSessionAuthentication(SessionAuthentication):
     """
     SessionAuthentication without CSRF enforcement.
@@ -177,7 +186,7 @@ def chat_stream(request):
 
             # Stream completion from OpenAI
             stream = client.chat.completions.create(
-                model="gpt-4-turbo-preview",
+                model=OPENAI_MODEL,
                 messages=messages,
                 tools=TOOLS,
                 stream=True,
@@ -341,7 +350,7 @@ def chat(request):
 
             # Get completion from OpenAI
             response = client.chat.completions.create(
-                model="gpt-4-turbo-preview",
+                model=OPENAI_MODEL,
                 messages=messages,
                 tools=TOOLS,
             )
