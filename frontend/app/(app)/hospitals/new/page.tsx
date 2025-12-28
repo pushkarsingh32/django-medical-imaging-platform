@@ -18,9 +18,6 @@ export default function NewHospitalPage() {
   const [formData, setFormData] = useState({
     name: '',
     address: '',
-    city: '',
-    state: '',
-    zip_code: '',
     contact_email: '',
     contact_phone: '',
   });
@@ -69,9 +66,6 @@ export default function NewHospitalPage() {
     const submitData = {
       name: formData.name,
       address: formData.address,
-      city: formData.city || undefined,
-      state: formData.state || undefined,
-      zip_code: formData.zip_code || undefined,
       contact_email: formData.contact_email || undefined,
       contact_phone: formData.contact_phone || undefined,
     };
@@ -149,37 +143,6 @@ export default function NewHospitalPage() {
                 {errors.address && (
                   <p className="text-sm text-red-500 mt-1">{errors.address}</p>
                 )}
-              </div>
-
-              {/* City, State, Zip */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="city">City</Label>
-                  <Input
-                    id="city"
-                    placeholder="City"
-                    value={formData.city}
-                    onChange={(e) => handleInputChange('city', e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="state">State</Label>
-                  <Input
-                    id="state"
-                    placeholder="State"
-                    value={formData.state}
-                    onChange={(e) => handleInputChange('state', e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="zip_code">ZIP Code</Label>
-                  <Input
-                    id="zip_code"
-                    placeholder="12345"
-                    value={formData.zip_code}
-                    onChange={(e) => handleInputChange('zip_code', e.target.value)}
-                  />
-                </div>
               </div>
 
               {/* Contact Information */}

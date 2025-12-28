@@ -10,7 +10,7 @@ ENV PYTHONUNBUFFERED=1 \
 # Set work directory
 WORKDIR /app
 
-# Install system dependencies for DICOM/medical imaging
+# Install system dependencies for DICOM/medical imaging and health checks
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
@@ -19,6 +19,7 @@ RUN apt-get update && apt-get install -y \
     zlib1g-dev \
     libmariadb-dev \
     pkg-config \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies

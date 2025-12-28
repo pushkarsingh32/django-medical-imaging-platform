@@ -64,6 +64,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'firstproject.correlation_middleware.CorrelationIdMiddleware',  # Correlation ID for tracing
     'corsheaders.middleware.CorsMiddleware',  # CORS - must be before CommonMiddleware
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -194,6 +195,21 @@ REST_FRAMEWORK = {
       ],
       'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
       'PAGE_SIZE': 20,
+      # Rate limiting (throttling)
+      'DEFAULT_THROTTLE_CLASSES': [
+          'rest_framework.throttling.AnonRateThrottle',
+          'rest_framework.throttling.UserRateThrottle',
+      ],
+      'DEFAULT_THROTTLE_RATES': {
+          'anon': '100/hour',       # Anonymous users: 100 requests per hour
+          'user': '1000/hour',      # Authenticated users: 1000 requests per hour
+          'burst': '60/minute',     # Burst rate: 60 requests per minute
+          'sustained': '1000/day',  # Sustained rate: 1000 requests per day
+          'upload': '20/hour',      # File uploads: 20 per hour (resource-intensive)
+          'ai_query': '50/hour',    # AI/LLM queries: 50 per hour (cost control)
+          'health': '1000/minute',  # Health checks: 1000 per minute (Kubernetes)
+          'contact': '5/hour',      # Contact form: 5 per hour (spam prevention)
+      },
   }
 # CORS Configuration for Next.js
 CORS_ALLOWED_ORIGINS = [
@@ -213,6 +229,11 @@ CORS_ALLOW_HEADERS = [
     'x-csrftoken',
     'x-requested-with',
     'x-session-token',  # Required for django-allauth headless
+    'x-correlation-id',  # For distributed tracing
+]
+# Expose headers so frontend can read them from responses
+CORS_EXPOSE_HEADERS = [
+    'x-correlation-id',  # Allow frontend to read correlation ID from response
 ]
 
 # CSRF Configuration - Allow requests from Next.js

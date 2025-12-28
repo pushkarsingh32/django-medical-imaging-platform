@@ -54,20 +54,86 @@ services:
       - DATABASE_URL=postgresql://medical_user:medical_pass@db:5432/medical_imaging
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - REDIS_DB=0
       - SECRET_KEY=django-insecure-dev-key-change-in-production
       - ALLOWED_HOSTS=localhost,127.0.0.1,backend
       - USE_S3=False
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - DB_PASSWORD=medical_pass
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-your-openai-api-key-here}
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8000/api/hospitals/ || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/api/health/ || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+
+  # Celery Worker
+  celery_worker:
+    build:
+      context: ./firstproject
+      dockerfile: Dockerfile
+    container_name: medical_imaging_celery_worker
+    command: celery -A firstproject worker -l info --concurrency=2
+    volumes:
+      - ./firstproject:/app
+      - backend_media:/app/media
+    environment:
+      - DEBUG=True
+      - DATABASE_URL=postgresql://medical_user:medical_pass@db:5432/medical_imaging
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+      - SECRET_KEY=django-insecure-dev-key-change-in-production
+      - USE_S3=False
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - DB_PASSWORD=medical_pass
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A firstproject inspect ping || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Celery Beat (Periodic Tasks Scheduler)
+  celery_beat:
+    build:
+      context: ./firstproject
+      dockerfile: Dockerfile
+    container_name: medical_imaging_celery_beat
+    command: celery -A firstproject beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    volumes:
+      - ./firstproject:/app
+    environment:
+      - DEBUG=True
+      - DATABASE_URL=postgresql://medical_user:medical_pass@db:5432/medical_imaging
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+      - SECRET_KEY=django-insecure-dev-key-change-in-production
+      - USE_S3=False
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - DB_PASSWORD=medical_pass
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_started
 
   # Next.js Frontend
   frontend:

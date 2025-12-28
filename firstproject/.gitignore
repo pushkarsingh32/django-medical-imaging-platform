@@ -31,3 +31,9 @@ Thumbs.db
 # Environment variables
 .env
 .env.local
+
+# Archives and zip files
+*.zip
+*.tar.gz
+*.rar
+*.7z

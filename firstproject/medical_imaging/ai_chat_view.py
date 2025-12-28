@@ -7,9 +7,24 @@ from django.http import StreamingHttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.conf import settings
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
 from decouple import config
 from openai import OpenAI
+from rest_framework.decorators import api_view, throttle_classes, permission_classes, authentication_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.authentication import SessionAuthentication
+from .throttling import AIQueryRateThrottle
 from .ai_tools import TOOLS, TOOL_HANDLERS
+
+
+class CsrfExemptSessionAuthentication(SessionAuthentication):
+    """
+    SessionAuthentication without CSRF enforcement.
+    Used for AI chat endpoints that are already protected by session authentication.
+    """
+    def enforce_csrf(self, request):
+        return  # Skip CSRF check
 
 
 # System prompt for the AI assistant
@@ -33,8 +48,10 @@ Always be helpful and provide context with your answers.
 """
 
 
-@csrf_exempt
-@require_http_methods(["POST"])
+@api_view(['POST'])
+@authentication_classes([CsrfExemptSessionAuthentication])
+@permission_classes([IsAuthenticated])
+@throttle_classes([AIQueryRateThrottle])
 def chat_stream(request):
     """
     AI Chat endpoint with streaming support.
@@ -45,6 +62,13 @@ def chat_stream(request):
         "history": [...]  // Optional previous messages
     }
     """
+    # Debug logging
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"Chat stream request - User: {request.user}, Authenticated: {request.user.is_authenticated}")
+    logger.info(f"Session key: {request.session.session_key}")
+    logger.info(f"Cookies: {request.COOKIES.keys()}")
+
     try:
         data = json.loads(request.body)
         user_message = data.get('message', '').strip()
@@ -216,8 +240,10 @@ def chat_stream(request):
         )
 
 
-@csrf_exempt
-@require_http_methods(["POST"])
+@api_view(['POST'])
+@authentication_classes([CsrfExemptSessionAuthentication])
+@permission_classes([IsAuthenticated])
+@throttle_classes([AIQueryRateThrottle])
 def chat(request):
     """
     Non-streaming chat endpoint for simple requests.

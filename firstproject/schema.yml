@@ -307,6 +307,78 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/health/:
+    get:
+      operationId: health_retrieve
+      description: "\n    Comprehensive health check endpoint for monitoring system
+        health.\n\n    **Use Cases:**\n    - Load balancers: Route traffic only to
+        healthy instances\n    - Kubernetes: Liveness and readiness probes\n    -
+        Monitoring systems: Alert on 503 responses\n    - Operations: Quick system
+        status overview\n\n    **Health Checks:**\n    - Database connectivity (SELECT
+        1 query)\n    - Redis cache (read/write test)\n    - Celery workers (ping
+        active workers)\n    - Storage backend (S3 or local filesystem)\n\n    **Status
+        Codes:**\n    - 200 OK: All systems healthy\n    - 503 Service Unavailable:
+        One or more systems unhealthy\n    "
+      summary: System Health Check
+      tags:
+      - Health
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: All systems healthy
+        '503':
+          description: One or more systems unhealthy
+  /api/health/liveness/:
+    get:
+      operationId: health_liveness_retrieve
+      description: "\n    Liveness probe for Kubernetes orchestration.\n\n    **Purpose:**\n
+        \   Determines if the application process is alive and functioning.\n\n    **Kubernetes
+        Behavior:**\n    - If this fails multiple times, Kubernetes RESTARTS the pod\n
+        \   - Should only fail if application is deadlocked or crashed\n    - Does
+        NOT check external dependencies (DB, Redis, etc.)\n\n    **Use in deployment.yaml:**\n
+        \   ```yaml\n    livenessProbe:\n      httpGet:\n        path: /api/health/liveness/\n
+        \       port: 8000\n      initialDelaySeconds: 30\n      periodSeconds: 10\n
+        \     failureThreshold: 3\n    ```\n    "
+      summary: Kubernetes Liveness Probe
+      tags:
+      - Health
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: Application is alive
+  /api/health/readiness/:
+    get:
+      operationId: health_readiness_retrieve
+      description: "\n    Readiness probe for Kubernetes orchestration.\n\n    **Purpose:**\n
+        \   Determines if the application is ready to serve traffic.\n\n    **Kubernetes
+        Behavior:**\n    - If this fails, Kubernetes REMOVES pod from load balancer\n
+        \   - Pod is NOT restarted (unlike liveness probe)\n    - Traffic is redirected
+        to healthy pods\n    - Pod is added back when check passes\n\n    **Checks:**\n
+        \   - Database connectivity (critical)\n    - Redis cache (critical)\n\n    **Difference
+        from Liveness:**\n    - Liveness: \"Is the app alive?\" → Restart if failing\n
+        \   - Readiness: \"Can the app handle requests?\" → Remove from load balancer
+        if failing\n\n    **Use in deployment.yaml:**\n    ```yaml\n    readinessProbe:\n
+        \     httpGet:\n        path: /api/health/readiness/\n        port: 8000\n
+        \     initialDelaySeconds: 10\n      periodSeconds: 5\n      failureThreshold:
+        2\n    ```\n    "
+      summary: Kubernetes Readiness Probe
+      tags:
+      - Health
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: Ready to serve traffic
+        '503':
+          description: Not ready to serve traffic
   /api/hospitals/:
     get:
       operationId: hospitals_list
@@ -925,6 +997,102 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/patients/{id}/generate_report/:
+    post:
+      operationId: patients_generate_report_create
+      description: Generate a comprehensive PDF report for a patient including all
+        studies and diagnoses. Returns task_id for async processing.
+      summary: Generate patient PDF report
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this patient.
+        required: true
+      tags:
+      - Patients
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatientListRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatientListRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatientListRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '202':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/patients/{id}/reports/:
+    get:
+      operationId: patients_reports_list
+      description: Retrieve all generated PDF reports for a patient.
+      summary: Get patient reports
+      parameters:
+      - in: query
+        name: gender
+        schema:
+          type: string
+          enum:
+          - F
+          - M
+          - O
+        description: |-
+          * `M` - Male
+          * `F` - Female
+          * `O` - Other
+      - in: query
+        name: hospital
+        schema:
+          type: integer
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this patient.
+        required: true
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - Patients
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPatientReportList'
+          description: ''
   /api/patients/{id}/studies/:
     get:
       operationId: patients_studies_list
@@ -1462,12 +1630,14 @@ paths:
           enum:
           - archived
           - completed
+          - failed
           - in_progress
           - pending
         description: |-
           * `pending` - Pending Review
           * `in_progress` - In Progress
           * `completed` - Completed
+          * `failed` - Failed
           * `archived` - Archieved
       tags:
       - Studies
@@ -1500,6 +1670,38 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+  /api/tasks/{task_id}/:
+    get:
+      operationId: tasks_retrieve
+      description: Retrieve the status of an asynchronous task by task ID.
+      summary: Get task status
+      parameters:
+      - in: path
+        name: task_id
+        schema:
+          type: string
+        description: Celery task ID
+        required: true
+      tags:
+      - Tasks
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskStatus'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
 components:
   schemas:
     ActionEnum:
@@ -1509,6 +1711,8 @@ components:
       - update
       - delete
       - download
+      - process
+      - failed
       type: string
       description: |-
         * `view` - Viewed
@@ -1516,6 +1720,8 @@ components:
         * `update` - Updated
         * `delete` - Deleted
         * `download` - Downloaded
+        * `process` - Processed
+        * `failed` - Failed
     AuditLog:
       type: object
       description: Serializer for audit logs (read-only for compliance)
@@ -1545,6 +1751,7 @@ components:
         ip_address:
           type: string
           readOnly: true
+          nullable: true
         user_agent:
           type: string
           readOnly: true
@@ -1961,7 +2168,7 @@ components:
           description: e.g. Chest, Lung, Brain
           maxLength: 100
         status:
-          $ref: '#/components/schemas/StatusEnum'
+          $ref: '#/components/schemas/StatusD34Enum'
         referring_physician:
           type: string
           maxLength: 200
@@ -2022,7 +2229,7 @@ components:
           description: e.g. Chest, Lung, Brain
           maxLength: 100
         status:
-          $ref: '#/components/schemas/StatusEnum'
+          $ref: '#/components/schemas/StatusD34Enum'
         clinical_notes:
           type: string
           description: Reason for study
@@ -2067,7 +2274,7 @@ components:
           description: e.g. Chest, Lung, Brain
           maxLength: 100
         status:
-          $ref: '#/components/schemas/StatusEnum'
+          $ref: '#/components/schemas/StatusD34Enum'
         clinical_notes:
           type: string
           description: Reason for study
@@ -2229,6 +2436,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PatientList'
+    PaginatedPatientReportList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PatientReport'
     PatchedDiagnosisRequest:
       type: object
       description: Serializer for Diagnosis
@@ -2373,7 +2603,7 @@ components:
           description: e.g. Chest, Lung, Brain
           maxLength: 100
         status:
-          $ref: '#/components/schemas/StatusEnum'
+          $ref: '#/components/schemas/StatusD34Enum'
         clinical_notes:
           type: string
           description: Reason for study
@@ -2590,6 +2820,72 @@ components:
       - hospital
       - last_name
       - medical_record_number
+    PatientReport:
+      type: object
+      description: |-
+        Serializer for PatientReport model
+        Tracks generated PDF reports
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        patient:
+          type: integer
+          readOnly: true
+        patient_name:
+          type: string
+          readOnly: true
+        generated_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        generated_by_name:
+          type: string
+          readOnly: true
+        pdf_file:
+          type: string
+          format: uri
+          description: PDF report file
+        file_url:
+          type: string
+          readOnly: true
+        file_size:
+          type: integer
+          readOnly: true
+          description: File size in bytes
+        file_size_mb:
+          type: string
+          readOnly: true
+        filename:
+          type: string
+          readOnly: true
+          description: Original filename
+        studies_count:
+          type: integer
+          readOnly: true
+          description: Number of studies included in this report
+        generated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        task_id:
+          type: string
+          readOnly: true
+          description: Celery task ID that generated this report
+      required:
+      - file_size
+      - file_size_mb
+      - file_url
+      - filename
+      - generated_at
+      - generated_by
+      - generated_by_name
+      - id
+      - patient
+      - patient_name
+      - pdf_file
+      - studies_count
+      - task_id
     SeverityEnum:
       enum:
       - normal
@@ -2602,18 +2898,89 @@ components:
         * `minor` - Minor Finding
         * `moderate` - Moderate Concern
         * `severe` - Severe - Urgent
-    StatusEnum:
+    StatusD34Enum:
       enum:
       - pending
       - in_progress
       - completed
+      - failed
       - archived
       type: string
       description: |-
         * `pending` - Pending Review
         * `in_progress` - In Progress
         * `completed` - Completed
+        * `failed` - Failed
         * `archived` - Archieved
+    TaskStatus:
+      type: object
+      description: |-
+        Serializer for TaskStatus model
+        Tracks async task progress
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        task_id:
+          type: string
+          readOnly: true
+        task_name:
+          type: string
+          maxLength: 255
+        status:
+          $ref: '#/components/schemas/TaskStatusStatusEnum'
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        total_items:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        processed_items:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        failed_items:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        progress_percentage:
+          type: string
+          readOnly: true
+        result:
+          nullable: true
+        error_message:
+          type: string
+        study:
+          type: integer
+          nullable: true
+        user:
+          type: integer
+          nullable: true
+      required:
+      - created_at
+      - id
+      - progress_percentage
+      - task_id
+      - task_name
+      - updated_at
+    TaskStatusStatusEnum:
+      enum:
+      - pending
+      - processing
+      - completed
+      - failed
+      type: string
+      description: |-
+        * `pending` - Pending
+        * `processing` - Processing
+        * `completed` - Completed
+        * `failed` - Failed
   securitySchemes:
     basicAuth:
       type: http

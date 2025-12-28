@@ -63,18 +63,48 @@ jobs:
         env:
           DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
           REDIS_HOST: localhost
+          REDIS_PORT: 6379
+          REDIS_DB: 0
           SECRET_KEY: test-secret-key
           DEBUG: 'True'
+          USE_S3: 'False'
+          DB_PASSWORD: test_password
+          CELERY_BROKER_URL: redis://localhost:6379/0
+          CELERY_RESULT_BACKEND: redis://localhost:6379/0
+          OPENAI_API_KEY: test-openai-key
         run: |
           python manage.py migrate --noinput
+
+      - name: Start Celery worker (background)
+        working-directory: ./firstproject
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+          REDIS_DB: 0
+          SECRET_KEY: test-secret-key
+          DEBUG: 'True'
+          USE_S3: 'False'
+          DB_PASSWORD: test_password
+          CELERY_BROKER_URL: redis://localhost:6379/0
+          CELERY_RESULT_BACKEND: redis://localhost:6379/0
+        run: |
+          celery -A firstproject worker -l info --detach
 
       - name: Run PyTest
         working-directory: ./firstproject
         env:
           DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
           REDIS_HOST: localhost
+          REDIS_PORT: 6379
+          REDIS_DB: 0
           SECRET_KEY: test-secret-key
           DEBUG: 'True'
+          USE_S3: 'False'
+          DB_PASSWORD: test_password
+          CELERY_BROKER_URL: redis://localhost:6379/0
+          CELERY_RESULT_BACKEND: redis://localhost:6379/0
+          OPENAI_API_KEY: test-openai-key
         run: |
           pytest medical_imaging/tests/ -v --cov=medical_imaging --cov-report=xml --cov-report=term-missing
 

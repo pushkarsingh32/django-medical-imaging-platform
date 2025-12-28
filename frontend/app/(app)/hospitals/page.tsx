@@ -119,48 +119,42 @@ export default function HospitalsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {(Array.isArray(data) ? data : data.results).map((hospital: any) => (
               <Card key={hospital.id} className="group hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="flex items-start gap-3">
-                    <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <Building2 className="h-6 w-6 text-primary" />
+                <div className="px-4 sm:px-6 pt-3 sm:pt-2 pb-0">
+                  <div className="flex items-start gap-2 sm:gap-3">
+                    <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <Building2 className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <CardTitle className="text-lg truncate">{hospital.name}</CardTitle>
-                      <CardDescription className="truncate">
-                        {hospital.city || 'No city provided'}
-                      </CardDescription>
+                      <h3 className="text-sm sm:text-base font-semibold break-words line-clamp-2">{hospital.name}</h3>
                     </div>
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
+                </div>
+                <CardContent className="space-y-1 pt-0 pb-3 sm:pb-2">
                   {hospital.address && (
                     <div className="flex items-start gap-2 text-sm">
                       <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                      <span className="text-muted-foreground break-words">
+                      <span className="text-muted-foreground break-words flex-1 min-w-0">
                         {hospital.address}
-                        {hospital.city && `, ${hospital.city}`}
-                        {hospital.state && `, ${hospital.state}`}
-                        {hospital.zip_code && ` ${hospital.zip_code}`}
                       </span>
                     </div>
                   )}
                   {hospital.contact_phone && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Phone className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <div className="flex items-start gap-2 text-sm">
+                      <Phone className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                       <a
                         href={`tel:${hospital.contact_phone}`}
-                        className="text-primary hover:underline"
+                        className="text-primary hover:underline break-all flex-1 min-w-0"
                       >
                         {hospital.contact_phone}
                       </a>
                     </div>
                   )}
                   {hospital.contact_email && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Mail className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <div className="flex items-start gap-2 text-sm">
+                      <Mail className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                       <a
                         href={`mailto:${hospital.contact_email}`}
-                        className="text-primary hover:underline truncate"
+                        className="text-primary hover:underline break-all flex-1 min-w-0"
                       >
                         {hospital.contact_email}
                       </a>
@@ -168,7 +162,7 @@ export default function HospitalsPage() {
                   )}
 
                   {/* Action Buttons */}
-                  <div className="flex gap-2 pt-2 border-t">
+                  <div className="flex gap-2 pt-3 mt-3 border-t">
                     <Button
                       variant="outline"
                       size="sm"

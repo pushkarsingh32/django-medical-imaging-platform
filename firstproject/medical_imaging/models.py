@@ -88,11 +88,12 @@ class ImagingStudy(models.Model):
         ('pending', 'Pending Review'),
         ('in_progress', 'In Progress'),
         ('completed', 'Completed'),
+        ('failed', 'Failed'),
         ('archived', 'Archieved'),
     ]
 
     patient = models.ForeignKey(
-        Patient, 
+        Patient,
         on_delete=models.CASCADE,# Delete studies if patient deleted,
         related_name='imaging_studies',
     )
@@ -102,6 +103,24 @@ class ImagingStudy(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     referring_physician = models.CharField(max_length=200, blank=True)
     clinical_notes = models.TextField(blank=True, help_text='Reason for study')
+    error_message = models.TextField(blank=True, help_text='Error details if processing failed')
+
+    # Pipeline versioning for reproducibility and regulatory compliance
+    processing_version = models.CharField(
+        max_length=50,
+        blank=True,
+        default='',
+        help_text='Version of DICOM processing algorithm used (e.g., v1.2.0)'
+    )
+
+    # Data retention for HIPAA compliance
+    retention_until = models.DateField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text='Date when this study can be purged (HIPAA: 6 years from last activity)'
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -259,6 +278,7 @@ class Diagnosis(models.Model):
 class AuditLog(models.Model):
       """
       HIPAA compliance: Track all data access and modifications
+      Enhanced with multi-tenant support and system event tracking
       """
       ACTION_CHOICES = [
           ('view', 'Viewed'),
@@ -266,18 +286,39 @@ class AuditLog(models.Model):
           ('update', 'Updated'),
           ('delete', 'Deleted'),
           ('download', 'Downloaded'),
+          ('process', 'Processed'),  # For system tasks
+          ('failed', 'Failed'),  # For failed operations
+      ]
+
+      ACTOR_TYPE_CHOICES = [
+          ('user', 'User'),
+          ('system', 'System'),
+          ('api', 'API Client'),
       ]
 
       user = models.ForeignKey(
           User,
           on_delete=models.SET_NULL,
           null=True,
+          blank=True,  # Can be null for system events
           related_name='audit_logs'
+      )
+      actor_type = models.CharField(
+          max_length=20,
+          choices=ACTOR_TYPE_CHOICES,
+          default='user',
+          help_text="Type of actor performing the action"
       )
       action = models.CharField(max_length=20, choices=ACTION_CHOICES)
       resource_type = models.CharField(max_length=50, help_text="e.g., Patient, ImagingStudy")
       resource_id = models.IntegerField(help_text="ID of the affected record")
-      ip_address = models.GenericIPAddressField()
+      tenant_id = models.IntegerField(
+          null=True,
+          blank=True,
+          db_index=True,
+          help_text="Hospital ID for multi-tenant isolation"
+      )
+      ip_address = models.GenericIPAddressField(null=True, blank=True)  # Optional for system events
       user_agent = models.TextField(blank=True)
       timestamp = models.DateTimeField(auto_now_add=True)
       details = models.JSONField(default=dict, blank=True)
@@ -288,10 +329,14 @@ class AuditLog(models.Model):
               models.Index(fields=['-timestamp']),
               models.Index(fields=['user', '-timestamp']),
               models.Index(fields=['resource_type', 'resource_id']),
+              models.Index(fields=['actor_type', '-timestamp']),  # Filter by actor type
+              models.Index(fields=['tenant_id', '-timestamp']),  # Multi-tenant queries
+              models.Index(fields=['tenant_id', 'action', '-timestamp']),  # Tenant-specific action queries
           ]
 
       def __str__(self):
-          return f"{self.user} {self.action} {self.resource_type}#{self.resource_id}"
+          actor = self.user.username if self.user else f"{self.actor_type.upper()}"
+          return f"{actor} {self.action} {self.resource_type}#{self.resource_id}"
 
 
 class ContactMessage(models.Model):

@@ -11,6 +11,7 @@ from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiPara
 from drf_spectacular.types import OpenApiTypes
 
 from .models import Hospital, Patient, ImagingStudy, DicomImage, Diagnosis, AuditLog, ContactMessage, TaskStatus
+from .throttling import UploadRateThrottle
 from .serializers import (
     HospitalSerializer,
     PatientListSerializer,
@@ -380,13 +381,15 @@ class ImagingStudyViewSet(viewsets.ModelViewSet):
               }
           }
       )
-      @action(detail=True, methods=['post'])
+      @action(detail=True, methods=['post'], throttle_classes=[UploadRateThrottle])
       def upload_images(self, request, pk=None):
           """
           Custom endpoint: POST /api/studies/{id}/upload_images/
           Upload medical images to a study - processes asynchronously with Celery
           Accepts multiple image files (DICOM or regular images)
           Returns task_id for progress tracking
+
+          Rate limit: 20 uploads per hour (prevents resource exhaustion)
           """
           from .tasks import process_dicom_images_async
 

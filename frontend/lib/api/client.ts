@@ -24,6 +24,17 @@ class ApiClient {
             config.headers['X-CSRFToken'] = csrfToken;
           }
         }
+
+        // Add correlation ID for distributed tracing
+        // Check if correlation ID already exists in session storage
+        let correlationId = this.getCorrelationId();
+        if (!correlationId) {
+          // Generate new correlation ID (simple UUID v4)
+          correlationId = this.generateCorrelationId();
+          this.setCorrelationId(correlationId);
+        }
+        config.headers['X-Correlation-ID'] = correlationId;
+
         return config;
       },
       (error) => Promise.reject(error)
@@ -31,8 +42,28 @@ class ApiClient {
 
     // Response interceptor
     this.client.interceptors.response.use(
-      (response) => response,
+      (response) => {
+        // Capture correlation ID from response headers for tracing
+        const correlationId = response.headers['x-correlation-id'];
+        if (correlationId) {
+          this.setCorrelationId(correlationId);
+        }
+        return response;
+      },
       (error) => {
+        // Capture correlation ID from error response for debugging
+        const correlationId = error.response?.headers?.['x-correlation-id'];
+        if (correlationId) {
+          this.setCorrelationId(correlationId);
+          // Log error with correlation ID for easier debugging
+          console.error(`[Correlation ID: ${correlationId}] API Error:`, {
+            url: error.config?.url,
+            method: error.config?.method,
+            status: error.response?.status,
+            message: error.response?.data?.message || error.message
+          });
+        }
+
         // Handle authentication errors
         if (error.response?.status === 401 || error.response?.status === 403) {
           // Only redirect if we're in the browser
@@ -53,6 +84,44 @@ class ApiClient {
       .split('; ')
       .find(row => row.startsWith('csrftoken='));
     return cookie ? cookie.split('=')[1] : null;
+  }
+
+  /**
+   * Generate a simple UUID v4 for correlation ID.
+   * Format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  private generateCorrelationId(): string {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
+
+  /**
+   * Get correlation ID from sessionStorage.
+   * Session-scoped (persists during user session, cleared on tab close).
+   */
+  private getCorrelationId(): string | null {
+    if (typeof window === 'undefined') return null;
+    return sessionStorage.getItem('correlation-id');
+  }
+
+  /**
+   * Set correlation ID in sessionStorage.
+   * Used to track requests across the user's session.
+   */
+  private setCorrelationId(correlationId: string): void {
+    if (typeof window === 'undefined') return;
+    sessionStorage.setItem('correlation-id', correlationId);
+  }
+
+  /**
+   * Get current correlation ID for debugging/logging.
+   * Useful for displaying in UI (e.g., error messages).
+   */
+  public getCurrentCorrelationId(): string | null {
+    return this.getCorrelationId();
   }
 
   async get<T>(url: string, params?: any): Promise<T> {

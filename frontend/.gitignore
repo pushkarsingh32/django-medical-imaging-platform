@@ -41,3 +41,9 @@ yarn-error.log*
 next-env.d.ts
 
 /venv
+
+# Archives and zip files
+*.zip
+*.tar.gz
+*.rar
+*.7z

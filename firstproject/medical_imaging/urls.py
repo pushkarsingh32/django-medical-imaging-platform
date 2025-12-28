@@ -24,6 +24,7 @@ from .image_views import (
     invalidate_cache,
     cache_statistics,
 )
+from .health_views import health_check, liveness_probe, readiness_probe
 
 
 router = DefaultRouter()
@@ -38,6 +39,10 @@ router.register(r'contact', ContactMessageViewSet, basename='contact')
 
 urlpatterns = [
     path('', include(router.urls)),
+    # Health check endpoints (for monitoring and load balancers)
+    path('health/', health_check, name='health-check'),
+    path('health/liveness/', liveness_probe, name='liveness-probe'),
+    path('health/readiness/', readiness_probe, name='readiness-probe'),
     # Stats endpoints
     path('stats/', dashboard_stats, name='dashboard-stats'),
     path('stats/trends/', study_trends, name='study-trends'),
