@@ -155,6 +155,62 @@ class ApiClient {
     const response = await this.client.delete<T>(url);
     return response.data;
   }
+
+  /**
+   * Stream POST request for Server-Sent Events (SSE).
+   * Uses native fetch with same configuration as axios client.
+   * Returns Response object for streaming consumption.
+   */
+  async streamPost(url: string, data?: any): Promise<Response> {
+    // Build full URL
+    const fullUrl = `${API_BASE}${url}`;
+
+    // Get CSRF token
+    const csrfToken = this.getCsrfToken();
+
+    // Get or generate correlation ID
+    let correlationId = this.getCorrelationId();
+    if (!correlationId) {
+      correlationId = this.generateCorrelationId();
+      this.setCorrelationId(correlationId);
+    }
+
+    // Build headers with same configuration as axios client
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+      'X-Correlation-ID': correlationId,
+    };
+
+    // Add CSRF token for non-GET requests
+    if (csrfToken) {
+      headers['X-CSRFToken'] = csrfToken;
+    }
+
+    // Make fetch request with credentials
+    const response = await fetch(fullUrl, {
+      method: 'POST',
+      credentials: 'include', // Same as withCredentials: true
+      headers,
+      body: data ? JSON.stringify(data) : undefined,
+    });
+
+    // Handle authentication errors (same as axios interceptor)
+    if (response.status === 401 || response.status === 403) {
+      if (typeof window !== 'undefined') {
+        const currentPath = window.location.pathname;
+        window.location.href = `/auth/login?redirect=${encodeURIComponent(currentPath)}`;
+      }
+      throw new Error('Authentication required');
+    }
+
+    // Capture correlation ID from response headers
+    const responseCorrelationId = response.headers.get('x-correlation-id');
+    if (responseCorrelationId) {
+      this.setCorrelationId(responseCorrelationId);
+    }
+
+    return response;
+  }
 }
 
 export const apiClient = new ApiClient();

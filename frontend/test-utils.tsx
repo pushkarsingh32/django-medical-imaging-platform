@@ -9,8 +9,8 @@ const createTestQueryClient = () =>
       queries: {
         // Disable retries in tests
         retry: false,
-        // Don't cache during tests
-        cacheTime: 0,
+        // Don't cache during tests (gcTime replaces cacheTime in React Query v5)
+        gcTime: 0,
       },
       mutations: {
         retry: false,

@@ -7,6 +7,7 @@ import LoadingDots from '@/components/LoadingDots';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { apiClient } from '@/lib/api';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -111,19 +112,13 @@ export default function ChatPage() {
     setMessages((prev) => [...prev, { role: 'user', content: userMessage }]);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ai/chat/stream/`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message: userMessage,
-          history: messages.map((m) => ({
-            role: m.role,
-            content: m.content,
-          })),
-        }),
+      // Use centralized API client with all configuration (credentials, CSRF, correlation ID)
+      const response = await apiClient.streamPost('/ai/chat/stream/', {
+        message: userMessage,
+        history: messages.map((m) => ({
+          role: m.role,
+          content: m.content,
+        })),
       });
 
       if (!response.ok) {
@@ -383,8 +378,9 @@ export default function ChatPage() {
                         li: ({ children }) => <li className="mb-1">{children}</li>,
                         strong: ({ children }) => <strong className="font-bold">{children}</strong>,
                         em: ({ children }) => <em className="italic">{children}</em>,
-                        code: ({ inline, children }) =>
-                          inline ? (
+                        code: ({ children, ...props }) => {
+                          const inline = 'inline' in props ? props.inline : false;
+                          return inline ? (
                             <code className="bg-gray-200 dark:bg-gray-700 px-1 py-0.5 rounded text-xs font-mono">
                               {children}
                             </code>
@@ -392,7 +388,8 @@ export default function ChatPage() {
                             <code className="block bg-gray-200 dark:bg-gray-700 p-2 rounded text-xs font-mono overflow-x-auto">
                               {children}
                             </code>
-                          ),
+                          );
+                        },
                         pre: ({ children }) => <pre className="mb-2">{children}</pre>,
                         h1: ({ children }) => <h1 className="text-xl font-bold mb-2">{children}</h1>,
                         h2: ({ children }) => <h2 className="text-lg font-bold mb-2">{children}</h2>,
