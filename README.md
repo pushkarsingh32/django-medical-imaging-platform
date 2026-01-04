@@ -1118,14 +1118,6 @@ MIT License - See LICENSE file for details
 
 ---
 
-## Support
-
-- **Documentation**: https://docs.medicalimaging.example.com
-- **Issues**: https://github.com/yourusername/medical-imaging/issues
-- **Email**: support@medicalimaging.example.com
-
----
-
 ## Acknowledgments
 
 - Django REST Framework team
