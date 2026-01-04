@@ -10,7 +10,7 @@ from io import BytesIO
 from PIL import Image
 
 # Setup Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'firstproject.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 django.setup()
 
 from django.core.files.uploadedfile import SimpleUploadedFile

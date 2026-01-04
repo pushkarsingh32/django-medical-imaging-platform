@@ -19,7 +19,7 @@ from .models import ImagingStudy, DicomImage, TaskStatus, Patient, PatientReport
 from .dicom_service import DicomParsingService
 from .pdf_service import PatientReportGenerator
 from django.core.files.storage import default_storage
-from firstproject.correlation_middleware import set_correlation_id, get_correlation_id
+from config.correlation_middleware import set_correlation_id, get_correlation_id
 
 logger = logging.getLogger(__name__)
 

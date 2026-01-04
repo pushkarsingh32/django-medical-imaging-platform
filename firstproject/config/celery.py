@@ -1,5 +1,5 @@
 """
-Celery configuration for firstproject.
+Celery configuration for Medical Imaging Platform.
 
 This module configures Celery for asynchronous task processing.
 """
@@ -8,10 +8,10 @@ from celery import Celery
 from decouple import config
 
 # Set the default Django settings module for the 'celery' program.
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'firstproject.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 
 # Create Celery app
-app = Celery('firstproject')
+app = Celery('config')
 
 # Load configuration from Django settings with 'CELERY_' prefix
 app.config_from_object('django.conf:settings', namespace='CELERY')

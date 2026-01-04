@@ -80,7 +80,7 @@ services:
       context: ./firstproject
       dockerfile: Dockerfile
     container_name: medical_imaging_celery_worker
-    command: celery -A firstproject worker -l info --concurrency=2
+    command: celery -A config worker -l info --concurrency=2
     volumes:
       - ./firstproject:/app
       - backend_media:/app/media
@@ -101,7 +101,7 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "celery -A firstproject inspect ping || exit 1"]
+      test: ["CMD-SHELL", "celery -A config inspect ping || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -113,7 +113,7 @@ services:
       context: ./firstproject
       dockerfile: Dockerfile
     container_name: medical_imaging_celery_beat
-    command: celery -A firstproject beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    command: celery -A config beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
     volumes:
       - ./firstproject:/app
     environment:

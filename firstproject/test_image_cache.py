@@ -12,7 +12,7 @@ from pathlib import Path
 
 # Setup Django environment
 sys.path.append(str(Path(__file__).parent))
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'firstproject.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 django.setup()
 
 from django.core.cache import cache

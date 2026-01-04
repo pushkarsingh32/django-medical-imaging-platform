@@ -119,7 +119,7 @@ class CorrelationIdLoggingFilter(logging.Filter):
         LOGGING = {
             'filters': {
                 'correlation_id': {
-                    '()': 'firstproject.correlation_middleware.CorrelationIdLoggingFilter'
+                    '()': 'config.correlation_middleware.CorrelationIdLoggingFilter'
                 }
             },
             'formatters': {
