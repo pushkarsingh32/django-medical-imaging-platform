@@ -133,7 +133,7 @@ export default function PatientsPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>MRN</TableHead>
+                      <TableHead className="pl-6">MRN</TableHead>
                       <TableHead>Patient Name</TableHead>
                       <TableHead>Age</TableHead>
                       <TableHead>Gender</TableHead>
@@ -148,7 +148,7 @@ export default function PatientsPage() {
                         onClick={() => handleRowClick(patient.id)}
                         className="cursor-pointer hover:bg-muted/50"
                       >
-                        <TableCell className="font-medium">
+                        <TableCell className="font-medium pl-6">
                           {patient.medical_record_number}
                         </TableCell>
                         <TableCell>

@@ -150,7 +150,7 @@ export default function StudiesPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Patient</TableHead>
+                  <TableHead className="pl-6">Patient</TableHead>
                   <TableHead>MRN</TableHead>
                   <TableHead>Modality</TableHead>
                   <TableHead>Body Part</TableHead>
@@ -180,7 +180,7 @@ export default function StudiesPage() {
                       className="cursor-pointer hover:bg-muted/50"
                       onClick={() => handleRowClick(study.id)}
                     >
-                      <TableCell className="font-medium">
+                      <TableCell className="font-medium pl-6">
                         {study.patient_name || 'N/A'}
                       </TableCell>
                       <TableCell>{study.patient_mrn || 'N/A'}</TableCell>

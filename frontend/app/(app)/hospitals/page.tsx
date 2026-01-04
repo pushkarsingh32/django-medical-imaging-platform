@@ -6,14 +6,7 @@ import { useHospitals, useDeleteHospital } from '@/lib/hooks/useHospitals';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Building2, Search, Mail, Phone, MapPin, Plus, Pencil, Trash2 } from 'lucide-react';
 import {

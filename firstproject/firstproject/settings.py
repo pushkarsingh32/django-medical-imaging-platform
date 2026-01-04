@@ -275,6 +275,9 @@ HEADLESS_FRONTEND_URLS = {
 # Token strategy - using Session Tokens (default)
 HEADLESS_TOKEN_STRATEGY = 'allauth.headless.tokens.sessions.SessionTokenStrategy'
 
+# Custom headless adapter to include is_staff and is_superuser in user data
+HEADLESS_ADAPTER = 'firstproject.adapters.CustomHeadlessAdapter'
+
 # Email backend (for development - prints to console)
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 # Redis Cache Configuration

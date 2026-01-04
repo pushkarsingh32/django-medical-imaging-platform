@@ -232,7 +232,7 @@ export default function ChatPage() {
     return (
       <div className="container mx-auto p-6 h-[calc(100vh-4rem)] max-w-5xl flex flex-col">
         {/* Header */}
-        <div className="mb-4 flex items-center justify-between flex-shrink-0">
+        <div className="mb-4 flex items-center justify-between shrink-0">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">AI Database Assistant</h1>
             <p className="text-sm text-muted-foreground">
@@ -342,7 +342,7 @@ export default function ChatPage() {
 
               <div
                 className={cn(
-                  "group relative max-w-[80%] rounded-lg px-4 py-3",
+                  "group relative max-w-[80%] rounded-lg px-4 py-3 text-sm",
                   message.role === "user"
                     ? "bg-blue-500 text-white"
                     : "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100"
@@ -367,7 +367,7 @@ export default function ChatPage() {
 
                 {/* Message content */}
                 {message.content && (
-                  <div className="prose prose-sm dark:prose-invert max-w-none break-words">
+                  <div className="prose prose-xs dark:prose-invert max-w-none break-words">
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
                       components={{

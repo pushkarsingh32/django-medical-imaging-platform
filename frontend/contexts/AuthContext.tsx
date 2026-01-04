@@ -1,7 +1,14 @@
-'use client';
+"use client";
 
-import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
-import { allauth } from '@/lib/allauth';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+  useCallback,
+} from "react";
+import { allauth } from "@/lib/allauth";
 
 // Types
 interface User {
@@ -9,12 +16,17 @@ interface User {
   email: string;
   display?: string;
   has_usable_password: boolean;
+  is_staff: boolean; // Can access Django admin
+  is_superuser: boolean; // Has all permissions
 }
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  isAdmin: boolean; // Convenience: is_staff OR is_superuser
+  isStaff: boolean; // User has staff status
+  isSuperuser: boolean; // User has superuser status
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -75,12 +87,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await allauth.auth.logout();
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error("Logout error:", error);
     } finally {
       allauth.clearSession();
       setUser(null);
     }
   };
+
+  // Computed admin status values
+  const isStaff = user?.is_staff ?? false;
+  const isSuperuser = user?.is_superuser ?? false;
+  const isAdmin = isStaff || isSuperuser;
 
   return (
     <AuthContext.Provider
@@ -88,6 +105,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         isLoading,
         isAuthenticated: !!user,
+        isAdmin,
+        isStaff,
+        isSuperuser,
         login,
         signup,
         logout,
@@ -103,7 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within AuthProvider');
+    throw new Error("useAuth must be used within AuthProvider");
   }
   return context;
 }

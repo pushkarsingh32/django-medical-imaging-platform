@@ -12,12 +12,21 @@ import {
   MessageSquare,
   LogOut,
   Menu,
-  X
+  X,
+  ShieldCheck,
+  Settings
 } from 'lucide-react';
 import { useState } from 'react';
 
+interface NavItem {
+  name: string;
+  href: string;
+  icon: any;
+  adminOnly?: boolean;
+}
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { user, logout } = useAuth();
+  const { user, logout, isAdmin, isStaff } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -27,6 +36,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     router.push('/auth/login');
   };
 
+  // Base navigation items (visible to all users)
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Patients', href: '/patients', icon: Users },
@@ -34,6 +44,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     { name: 'Hospitals', href: '/hospitals', icon: Building2 },
     { name: 'AI Chat', href: '/chat', icon: MessageSquare },
   ];
+
+  // Admin-only navigation items
+  const adminNavigation = [
+    { name: 'Admin Panel', href: '/admin', icon: ShieldCheck, adminOnly: true },
+    { name: 'Audit Logs', href: '/audit-logs', icon: Settings, adminOnly: true },
+  ];
+
+  // Combine navigation based on user role
+  const allNavigation = isAdmin
+    ? [...navigation, ...adminNavigation]
+    : navigation;
 
   const isActive = (href: string) => {
     if (href === '/dashboard') {
@@ -75,7 +96,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
           {/* Navigation */}
           <nav className="flex-1 p-4 space-y-2">
-            {navigation.map((item) => {
+            {allNavigation.map((item) => {
               const Icon = item.icon;
               const active = isActive(item.href);
 
@@ -92,6 +113,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 >
                   <Icon className="h-4 w-4" />
                   <span className="text-sm font-medium">{item.name}</span>
+                  {item.adminOnly && (
+                    <ShieldCheck className="h-3 w-3 ml-auto opacity-50" />
+                  )}
                 </Link>
               );
             })}
@@ -102,7 +126,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <div className="flex items-center gap-3 px-4 py-2 mb-2 select-none">
               <div className="flex-1">
                 <p className="text-sm font-medium">{user?.email}</p>
-                <p className="text-xs text-muted-foreground">Logged in</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-xs text-muted-foreground">Logged in</p>
+                  {isAdmin && (
+                    <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
+                      {user?.is_superuser ? 'Superuser' : 'Staff'}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
             <Button

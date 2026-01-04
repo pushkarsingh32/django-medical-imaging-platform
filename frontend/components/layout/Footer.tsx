@@ -1,8 +1,14 @@
 import Link from 'next/link';
-import { Activity, Mail, MapPin, Phone } from 'lucide-react';
+import { Activity, Mail, MapPin, Phone, FileCode } from 'lucide-react';
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
+
+  // Get API base URL from environment variable
+  // Remove '/api' suffix to get the server base URL, then add '/api/docs/'
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+  const serverBaseUrl = apiBaseUrl.replace(/\/api\/?$/, ''); // Remove '/api' or '/api/' from end
+  const apiDocsUrl = `${serverBaseUrl}/api/docs/`;
 
   return (
     <footer className="bg-gray-900 text-gray-300">
@@ -43,6 +49,17 @@ export default function Footer() {
                 <Link href="/auth/login" className="text-sm text-gray-300 hover:text-white hover:underline cursor-pointer transition-colors">
                   Login
                 </Link>
+              </li>
+              <li>
+                <a
+                  href={apiDocsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-gray-300 hover:text-white hover:underline cursor-pointer transition-colors inline-flex items-center gap-1"
+                >
+                  <FileCode className="h-3 w-3" />
+                  API Docs
+                </a>
               </li>
             </ul>
           </div>
@@ -91,6 +108,14 @@ export default function Footer() {
               <Link href="#" className="text-sm text-gray-300 hover:text-white hover:underline cursor-pointer transition-colors">
                 Terms of Service
               </Link>
+              <a
+                href={apiDocsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-gray-300 hover:text-white hover:underline cursor-pointer transition-colors"
+              >
+                API Documentation
+              </a>
             </div>
           </div>
         </div>
