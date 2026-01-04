@@ -113,3 +113,8 @@ credentials.json
 
 # Local development
 .cache/
+
+# Private documentation (learning/interview materials)
+INTERVIEW_QA.md
+DISTRIBUTED_SYSTEMS_EXPLAINED.md
+TECHNICAL_DEEP_DIVE.md
